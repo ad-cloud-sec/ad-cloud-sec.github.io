@@ -4,7 +4,6 @@ Security research, detection engineering, and incident analysis from a practitio
 
 ## Writing
 
-- [Two Look-Alike Domains. One Email Man-in-the-Middle.](https://ad-cloud-sec.github.io/posts/bec-email-mitm) — A real-world BEC investigation: double domain impersonation, email MitM, and why every authentication check returned green.
 - [Two Look-Alike Domains. One Email Man-in-the-Middle.](https://ad-cloud-sec.github.io/posts/blog1-email-mitm) — A real-world BEC investigation: double domain impersonation, email MitM, and why every authentication check returned green.
 
 ## Focus Areas

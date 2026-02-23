@@ -641,4 +641,19 @@ Time between registration and attack execution: short window</pre>
   <h2>The Actual Problem</h2>
   <p>The attack passed every technical gate. Authentication worked. The gateway worked. The SIEM worked. Nothing failed in the way security tools are designed to detect failure.</p>
   <p>The failure was architectural. The question no security control was asking is: <em>should this entity be trusted by this business, in this context, for this request?</em></p>
-  <p>Email authentication answers: "Is this message legitimately fr
+  <p>Email authentication answers: "Is this message legitimately from the domain it claims?"
+  <p>It does not answer: "Is this domain one the organization should trust for financial instructions?"</p>
+  <p>That second question requires business context — vendor contact databases, verified contact inventories, out-of-band verification requirements for payment changes, thread-aware anomaly detection.</p>
+  <p>Until organizations start threat-modeling their business workflows the same way they threat-model their infrastructure, BEC will remain one of the most effective and least-detected attack patterns in enterprise security.</p>
+
+  <div class="callout">
+    <p><strong>The fix isn't better email security tooling. It's building verification into the workflow itself.</strong></p>
+  </div>
+
+  <div class="disclaimer">
+    This analysis reflects patterns observed in real-world BEC investigations. All identifying details have been anonymized. Certain technical configurations have been generalized to preserve confidentiality.
+  </div>
+
+</div>
+</body>
+</html>

@@ -4,7 +4,9 @@ Security research, detection engineering, and incident analysis from a practitio
 
 ## Writing
 
-- [Two Look-Alike Domains. One Email Man-in-the-Middle.](https://ad-cloud-sec.github.io/posts/blog1-email-mitm) — A real-world BEC investigation: double domain impersonation, email MitM, and why every authentication check returned green.
+- [Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel](https://ad-cloud-sec.github.io/posts/offboarding-sentinel.html) — Dynamic watchlist, ten KQL analytics rules covering every exfiltration and persistence path, alert fusion, monitoring workbook, and RBAC isolation.
+
+- [Two Look-Alike Domains. One Email Man-in-the-Middle.](https://ad-cloud-sec.github.io/posts/bec-email-mitm.html) — A real-world BEC investigation: double domain impersonation, email MitM, and why every authentication check returned green.
 
 ## Focus Areas
 

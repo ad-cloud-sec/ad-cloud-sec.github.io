@@ -226,21 +226,21 @@
 <div class="page">
 
   <div class="masthead">
-    <div class="kicker">Email Security &nbsp;·&nbsp; Incident Analysis &nbsp;·&nbsp; Detection Engineering</div>
+    <div class="kicker">Email Security &nbsp;·&nbsp; DNS Security &nbsp;·&nbsp; Incident Analysis &nbsp;·&nbsp; Detection Engineering</div>
     <h1>Two Look-Alike Domains. One Email Man-in-the-Middle. Nobody Noticed Until It Was Too Late.</h1>
-    <p class="deck">By the time security got involved, there was no malware to sandbox. No credential to reset. No exploit to reverse. Just an email thread — professional, normal, multi-participant — and a payment that went to the wrong account.</p>
+    <p class="deck">By the time security got involved, there was no malware to sandbox. No credential to reset. No exploit to reverse. Just an email thread between professionals and a payment that went to the wrong account.</p>
   </div>
 
-  <p>This analysis reflects patterns observed in a real-world BEC investigation. Technical artifacts illustrate actual attack methodology. All identifying details have been anonymized. The lessons aren't.</p>
+  <p>This analysis reflects generalized patterns from documented BEC attack methodology. Technical artifacts illustrate actual attack techniques. All entities are fictional. The lessons are real.</p>
 
   <hr>
 
   <h2>The Setup: Why It Worked Before Anyone Noticed</h2>
   <p>The attacker didn't compromise anything. They registered a domain.</p>
-  <p><strong>Legitimate domain:</strong> <code>meridianpay.com</code><br>
-  <strong>Attacker domain:</strong> <code>meridiapay.com</code></p>
-  <p>One letter dropped. "Meridian Pay" became "Meridia Pay." Both look like real company names at a glance. That's it. That's the whole attack surface.</p>
-  <p>But the domain registration was just the start. The attacker configured it to mirror the real vendor infrastructure exactly. Same MX provider. Valid SPF. Valid DKIM. No DMARC — same as the vendor.</p>
+  <p><strong>Legitimate vendor domain:</strong> <code>zelvapay.com</code><br>
+  <strong>Attacker vendor domain:</strong> <code>zelvpay.com</code></p>
+  <p>One letter dropped. "Zelva Pay" became "Zelv Pay." Both look like real company names at a glance. That's it. That's the whole attack surface.</p>
+  <p>But the domain registration was just the start. The attacker configured it to mirror the real vendor infrastructure exactly. Same MX provider. Valid SPF. Valid DKIM. No DMARC. Same as the vendor.</p>
   <p>When the emails arrived, every authentication check came back clean.</p>
 
   <hr>
@@ -251,26 +251,26 @@
   <p>This attack ran two deceptions simultaneously.</p>
   <p><strong>The attacker registered two domains:</strong></p>
 
-<pre>Attacker domain 1:   meridiapay.com     ← impersonates the vendor
-                     (deceives Pinnacle Corp into thinking it's the real vendor)
+<pre>Attacker domain 1:   zelvpay.com     ← impersonates the vendor
+                     (deceives Orvex Corp into thinking it's the real vendor)
 
-Attacker domain 2:   pinnaclecorp.com   ← impersonates the victim company
-                     (deceives Meridian Pay into thinking it's Pinnacle Corp)</pre>
+Attacker domain 2:   orvecorp.com    ← impersonates the victim company
+                     (deceives Zelva Pay into thinking it's Orvex Corp)</pre>
 
-  <p>The real vendor wasn't silent either. They were actively replying throughout the whole thing. But their replies were going to <code>pinnaclecorp.com</code> — the attacker's inbox. Pinnacle Corp's emails were going to <code>meridiapay.com</code> — also the attacker.</p>
+  <p>The real vendor wasn't silent either. They were actively replying throughout the whole thing. But their replies were going to <code>orvecorp.com</code>, the attacker's inbox. Orvex Corp's emails were going to <code>zelvpay.com</code>, which was also the attacker.</p>
   <p>The attacker sat in the middle. Reading everything. Forwarding selectively. Controlling both sides of the conversation.</p>
 
 <pre>Reality of the communication flow:
 
-PINNACLE CORP  → meridiapay.com (attacker) → MERIDIAN PAY NEVER RECEIVED IT
-MERIDIAN PAY  → pinnaclecorp.com (attacker) → PINNACLE CORP NEVER RECEIVED IT
+ORVEX CORP  → zelvpay.com (attacker) → ZELVA PAY NEVER RECEIVED IT
+ZELVA PAY  → orvecorp.com (attacker) → ORVEX CORP NEVER RECEIVED IT
 
 What both sides thought was happening:
-PINNACLE CORP  ←────────────────────────────→ MERIDIAN PAY</pre>
+ORVEX CORP  ←────────────────────────────→ ZELVA PAY</pre>
 
   <ul>
-    <li>Meridian Pay thought they were talking to Pinnacle Corp. They weren't.</li>
-    <li>Pinnacle Corp thought they were talking to Meridian Pay. They weren't.</li>
+    <li>Zelva Pay thought they were talking to Orvex Corp. They weren't.</li>
+    <li>Orvex Corp thought they were talking to Zelva Pay. They weren't.</li>
     <li>Every reply, every update, every clarification went through the attacker first.</li>
     <li>Neither side had any reason to be suspicious. Responses kept coming.</li>
   </ul>
@@ -289,46 +289,46 @@ PINNACLE CORP  ←────────────────────�
 
   <h3>Header Analysis: Why Every Gate Passed</h3>
 
-<pre>Return-Path: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7a1813161613141d3a171f08131e131b0a1b0354191517">[email&#160;protected]</a>&gt;
-Received: from mail.meridiapay.com (198.51.100.47)
-DKIM-Signature: v=1; a=rsa-sha256; d=meridiapay.com
+<pre>Return-Path: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="385a51545451565f78425d544e485941165b5755">[email&#160;protected]</a>&gt;
+Received: from mail.zelvpay.com (198.51.100.47)
+DKIM-Signature: v=1; a=rsa-sha256; d=zelvpay.com
 Authentication-Results:
-  spf=pass (meridiapay.com: 198.51.100.47 is authorized)
-  dkim=pass header.d=meridiapay.com
-  dmarc=pass action=none header.from=meridiapay.com</pre>
+  spf=pass (zelvpay.com: 198.51.100.47 is authorized)
+  dkim=pass header.d=zelvpay.com
+  dmarc=none (no policy found for zelvpay.com)</pre>
 
-  <p>Everything passed. Because it was all valid — for the attacker's domain.</p>
+  <p>Everything passed. Because it was all valid for the attacker's domain.</p>
   <p>SPF, DKIM, and DMARC validate <strong>sending infrastructure</strong>. That's it. They don't tell you whether a domain should actually be trusted by your organization.</p>
 
   <h3>Infrastructure Comparison</h3>
 
-<pre>Legitimate domain:     meridianpay.com
+<pre>Legitimate domain:     zelvapay.com
   Registrar:           Major registrar
   Created:             Early 2000s
   MX:                  cloud-based mail routing infrastructure
   SPF:                 v=spf1 include:[cloud-mail-provider] ~all
   DMARC:               Not configured
 
-Attacker domain:       meridiapay.com
+Attacker domain:       zelvpay.com
   Registrar:           Privacy-protected
   Created:             Several months before the attack
   MX:                  cloud-based mail routing infrastructure
   SPF:                 v=spf1 include:[cloud-mail-provider] ~all
   DMARC:               Not configured</pre>
 
-  <p>The attacker mirrored the vendor's mail setup deliberately. Same MX provider, same configuration. To any mail server or email gateway, both domains looked identical.</p>
+  <p>The attacker mirrored the vendor's mail setup deliberately. Same class of MX provider, same SPF structure, same absence of DMARC. To any mail server or email gateway, both domains looked functionally identical.</p>
   <p>Months in advance. This wasn't opportunistic.</p>
 
   <h3>Thread Reconstruction via Message-ID</h3>
 
-<pre>Message 1:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff9c90918b9e9c8bbf929a8d969b969e918f9e86d19c9092">[email&#160;protected]</a>           ← real vendor
-             Message-ID: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1253222223527f77607b767b737c62736b3c717d7f">[email&#160;protected]</a>&gt;
+<pre>Message 1:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a4c7cbcad0c5c7d0e4dec1c8d2c5d4c5dd8ac7cbc9">[email&#160;protected]</a>           ← real vendor
+             Message-ID: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f1b0c1c1c0b18b949d8790819088df929e9c">[email&#160;protected]</a>&gt;
 
-Message 2:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="731a1d0716011d121f5e0600160133031a1d12101f16101c01035d101c1e">[email&#160;protected]</a>     ← internal reply
-             In-Reply-To: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e4a5d4d4d5a48981968d808d858a94859dca878b89">[email&#160;protected]</a>&gt;
+Message 2:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f59c9b8190879b9499d880869087b59a8783908d969a8785db969a98">[email&#160;protected]</a>     ← internal reply
+             In-Reply-To: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="185928282958627d746e79687961367b7775">[email&#160;protected]</a>&gt;
 
-Message 3:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="91f3f8fdfdf8fff6d1fcf4e3f8f5f8f0e1f0e8bff2fefc">[email&#160;protected]</a>            ← attacker enters here
-             In-Reply-To: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3273020203725f57405b565b535c42534b1c515d5f">[email&#160;protected]</a>&gt;     ← correctly references real thread</pre>
+Message 3:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8be9e2e7e7e2e5eccbf1eee7fdfbeaf2a5e8e4e6">[email&#160;protected]</a>            ← attacker enters here
+             In-Reply-To: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3c7d0c0c0d7c4659504a5d4c5d45125f5351">[email&#160;protected]</a>&gt;     ← correctly references real thread</pre>
 
   <p>The attacker entered mid-thread. By that point, context and trust were already established between the real participants. Once inside, they were indistinguishable from anyone else in the conversation.</p>
 
@@ -338,8 +338,8 @@ Message 3:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" da
   <p>The organization had a standard enterprise setup. Email gateway, SIEM, MFA, EDR. Here's what each control saw:</p>
 
 <pre>Email Gateway:
-  SPF check           → PASS  (valid for meridiapay.com)
-  DKIM verification   → PASS  (valid signature for meridiapay.com)
+  SPF check           → PASS  (valid for zelvpay.com)
+  DKIM verification   → PASS  (valid signature for zelvpay.com)
   DMARC policy        → PASS  (no DMARC on attacker domain = no enforcement)
   Malware scan        → CLEAN (no payload, no URLs, plain text)
   Attachment sandbox  → N/A   (no attachments)
@@ -356,11 +356,11 @@ What happened:             Successful impersonation. Serious operational impact.
   <h3>The DMARC Gap (Commonly Misunderstood)</h3>
   <p>Neither the legitimate vendor domain nor the attacker's lookalike had DMARC configured:</p>
 
-<pre>meridianpay.com:   _dmarc → No record (NXDOMAIN response)
-meridiapay.com:    _dmarc → No record (NXDOMAIN response)</pre>
+<pre>zelvapay.com:   _dmarc → No record (NXDOMAIN response)
+zelvpay.com:    _dmarc → No record (NXDOMAIN response)</pre>
 
   <p>This matters, but it's also widely misunderstood. Even if the vendor had DMARC at <code>p=reject</code>, it wouldn't have stopped this attack.</p>
-  <p>DMARC protects against someone spoofing your domain. When an attacker registers a completely separate domain and sets up their own mail infrastructure, your DMARC record means nothing. They're not spoofing <code>meridianpay.com</code>. They own <code>meridiapay.com</code> and everything on it is legitimate — from a protocol perspective.</p>
+  <p>DMARC protects against someone spoofing your domain. When an attacker registers a completely separate domain and sets up their own mail infrastructure, your DMARC record means nothing. They're not spoofing <code>zelvapay.com</code>. They own <code>zelvpay.com</code> and everything on it is legitimate from a protocol perspective.</p>
   <p>With no DMARC on either domain, both looked the same to any receiving mail server. Neither enforcing, neither rejecting. The symmetry actually made the switch harder to catch.</p>
 
   <div class="callout">
@@ -370,13 +370,12 @@ meridiapay.com:    _dmarc → No record (NXDOMAIN response)</pre>
   <hr>
 
   <h2>What the Investigation Revealed</h2>
-  <p>The domain forensics told one story. The investigation surfaced a few more.</p>
-
+  
   <div class="indicator-label">Indicator 1</div>
   <h3>Free Email Provider Used in Attack Chain</h3>
   <p>Analysis of the email headers revealed that at least one message in the attack chain originated from a free consumer email provider rather than the attacker's registered lookalike domain.</p>
 
-<pre>Expected:   <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c1a3a8adada8afa681aca4b3a8a5a8a0b1a0b8efa2aeac">[email&#160;protected]</a>     ← registered lookalike domain
+<pre>Expected:   <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7e1c1712121710193e041b12080e1f07501d1113">[email&#160;protected]</a>     ← registered lookalike domain
 Observed:   [attacker]@freemail.com    ← free consumer provider, no corporate infrastructure</pre>
 
   <p>A free email address in a corporate financial thread is a hard stop. Should be an automatic escalation trigger. It wasn't.</p>
@@ -392,7 +391,7 @@ Observed:   [attacker]@freemail.com    ← free consumer provider, no corporate 
 
 <pre>WHOIS COMPARISON
 ─────────────────────────────────────────────────────────
-                        meridianpay.com      meridiapay.com
+                        zelvapay.com      zelvpay.com
                         (legitimate)         (attacker)
 ─────────────────────────────────────────────────────────
 Created:                Early 2000s          Recent registration
@@ -405,28 +404,28 @@ DNSSEC:                 Unsigned             Unsigned
 
 MX RECORDS
 ─────────────────────────────────────────────────────────
-meridianpay.com:        mx001.[provider].net
+zelvapay.com:        mx001.[provider].net
                         mx002.[provider].net
 
-meridiapay.com:         cloud-based mail routing infrastructure
+zelvpay.com:         cloud-based mail routing infrastructure
 ─────────────────────────────────────────────────────────
 
 SPF RECORDS
 ─────────────────────────────────────────────────────────
-meridianpay.com:        v=spf1 include:[legacy-mail-provider] ~all
-meridiapay.com:         v=spf1 include:[cloud-mail-provider] ~all
+zelvapay.com:        v=spf1 include:[legacy-mail-provider] ~all
+zelvpay.com:         v=spf1 include:[cloud-mail-provider] ~all
 ─────────────────────────────────────────────────────────
 
 DMARC
 ─────────────────────────────────────────────────────────
-meridianpay.com:        NOT CONFIGURED
-meridiapay.com:         NOT CONFIGURED (NXDOMAIN)
+zelvapay.com:        NOT CONFIGURED
+zelvpay.com:         NOT CONFIGURED (NXDOMAIN)
 ─────────────────────────────────────────────────────────
 
 A RECORD (web hosting)
 ─────────────────────────────────────────────────────────
-meridianpay.com:        No A record (not web-hosted)
-meridiapay.com:         Resolves to commodity shared hosting infrastructure
+zelvapay.com:        No A record (not web-hosted)
+zelvpay.com:         Resolves to commodity shared hosting infrastructure
 ─────────────────────────────────────────────────────────</pre>
 
   <p>The legitimate domain is exactly what an established business looks like. Long registration history, legacy mail provider, no website. Boring in the best way.</p>
@@ -449,15 +448,15 @@ meridiapay.com:         Resolves to commodity shared hosting infrastructure
 
 <pre>Domain registration timeline:
 
-meridiapay.com      ← impersonates vendor
+zelvpay.com      ← impersonates vendor
   Registered:       Weeks before the attack
   Configured:       Cloud mail infrastructure + SPF active immediately
-  Purpose:          Deceive Pinnacle Corp
+  Purpose:          Deceive Orvex Corp
 
-pinnaclecorp.com    ← impersonates victim organization
+orvecorp.com     ← impersonates victim organization
   Registered:       Within the same short window
   Configured:       Cloud-based mail infrastructure
-  Purpose:          Deceive Meridian Pay
+  Purpose:          Deceive Zelva Pay
 
 Time between registration and attack execution: short window</pre>
 
@@ -473,23 +472,23 @@ Time between registration and attack execution: short window</pre>
   <hr>
 
   <h2>The Authentication Posture Problem</h2>
-  <p>Post-incident authentication review surfaced a gap on the victim's own domain too.</p>
+  <p>Post-incident authentication review commonly surfaces gaps on the targeted organisation's own domain.</p>
   <p>DMARC wasn't at <code>p=reject</code>. No aggregate reporting either, so no visibility into who was spoofing the domain. Moving to full rejection with reporting fixed both problems.</p>
   <p>Won't stop a lookalike attack. But it closes the spoofing vector and gives you visibility into who's trying.</p>
-  <p>SPF had multiple authorized senders — cloud mail, marketing tools, CRM. Normal for any enterprise. But you need to validate DKIM alignment on each one before pushing to reject. Move too fast and you break legitimate mail.</p>
+  <p>SPF had multiple authorized senders: cloud mail, marketing tools, CRM. Normal for any enterprise. But you need to validate DKIM alignment on each one before pushing to reject. Move too fast and you break legitimate mail.</p>
 
   <hr>
 
   <h2>Lessons Learned</h2>
 
   <h3>For Security Teams</h3>
-  <p>Lookalike monitoring needs to go both ways — inbound domains impersonating your vendors, and outbound domains impersonating you. This attack ran both simultaneously. Run <code>dnstwist</code> quarterly. Any domain within 1-2 characters of yours with active MX records is worth watching. And get DMARC aggregate reporting (<code>rua=</code>) turned on — without it you're enforcing blind.</p>
+  <p>Lookalike monitoring needs to go both ways: inbound domains impersonating your vendors, and outbound domains impersonating you. This attack ran both simultaneously. Run <code>dnstwist</code> quarterly. Any domain within 1-2 characters of yours with active MX records is worth watching. And get DMARC aggregate reporting (<code>rua=</code>) turned on. Without it you have no visibility into who's trying.</p>
 
   <h3>For Detection Engineers</h3>
-  <p>Gateway rules without business context are noise. The signal is in correlation: domain similarity + domain age + new thread participant + financial keywords. Build those rules — they don't exist out of the box. And treat <code>Message-ID</code> and <code>In-Reply-To</code> headers as your primary forensic tool in any BEC investigation. They tell you exactly when the attacker entered and what they had access to.</p>
+  <p>Gateway rules without business context are noise. The signal is in correlation: domain similarity + domain age + new thread participant + financial keywords. Build those rules. They don't exist out of the box. And treat <code>Message-ID</code> and <code>In-Reply-To</code> headers as your primary forensic tool in any BEC investigation. They tell you exactly when the attacker entered and what they had access to.</p>
 
   <h3>For Incident Responders</h3>
-  <p>Start with the headers, not the endpoint. There's no compromise to find. The attack surface is the email thread itself. Trace every participant, verify every domain, reconstruct the timeline through Message-ID correlation. Out-of-band verification for banking changes needs to be a mandatory process step — not left to individual judgment.</p>
+  <p>Start with the headers, not the endpoint. There's no compromise to find. The attack surface is the email thread itself. Trace every participant, verify every domain, reconstruct the timeline through Message-ID correlation. Out-of-band verification for banking changes needs to be a mandatory process step, not left to individual judgment.</p>
 
   <h3>For Leaders</h3>
   <p>Financial processes are designed for efficiency, not adversarial conditions. If your payment change workflow has no verification step, threat-modeling your infrastructure doesn't help. Security can flag anomalies. The process has to require verification before money moves.</p>
@@ -501,7 +500,7 @@ Time between registration and attack execution: short window</pre>
   <p>Five things that would have stopped this:</p>
 
   <p><strong>1. A vendor contact inventory</strong><br>
-  A maintained list of confirmed email domains for every active vendor. Check every inbound financial email against it. <code>meridiapay.com</code> not in the registry? It doesn't reach finance.</p>
+  A maintained list of confirmed email domains for every active vendor. Check every inbound financial email against it. <code>zelvpay.com</code> not in the registry? It doesn't reach finance.</p>
 
   <p><strong>2. Lookalike domain monitoring</strong><br>
   Automated scanning for newly registered domains close to your known vendors. Both attacker domains were registered weeks before the attack. That window exists for every one of these cases. Almost no one uses it.</p>
@@ -519,17 +518,20 @@ Time between registration and attack execution: short window</pre>
 
   <hr>
 
-  <h2>The Actual Problem</h2>
+  <h2>The Uncomfortable Truth</h2>
   <p>Every technical gate passed. Authentication worked. Gateway worked. SIEM worked. Nothing failed in the way security tools are designed to detect failure.</p>
   <p>The failure was architectural. No security control was asking: <em>should this entity be trusted by this business, for this specific request, right now?</em></p>
-  <p>Email authentication answers one question: is this message legitimately from the domain it claims? It doesn't answer whether that domain should be trusted for financial instructions. That's a business context question — and it requires vendor registries, verified contact lists, mandatory verification workflows, and thread-aware detection. Until organizations start threat-modeling their financial workflows the same way they threat-model their infrastructure, BEC will keep working.</p>
+
+  <p>Email authentication answers one question: is this message legitimately from the domain it claims? It doesn't answer whether that domain should be trusted for financial instructions. That's a business context question. It requires vendor registries, verified contact lists, mandatory verification workflows, and thread-aware detection. Until organizations start threat-modeling their financial workflows the same way they threat-model their infrastructure, BEC will keep working.</p>
+
+  <p>The fix isn't better email security tooling. It's building verification into the workflow itself.</p>
 
   <div class="callout">
     <p><strong>The fix isn't better email security tooling. It's building verification into the workflow itself.</strong></p>
   </div>
 
   <div class="disclaimer">
-    This analysis reflects patterns observed in real-world BEC investigations. All identifying details have been anonymized. Certain technical configurations have been generalized to preserve confidentiality.
+    This analysis reflects generalized patterns from documented BEC attack methodology. Technical artifacts illustrate actual attack techniques. All entities are fictional. The lessons are real.
   </div>
 
 </div>

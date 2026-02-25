@@ -127,6 +127,8 @@
     padding: 20px 24px;
     margin: 24px 0;
     overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     line-height: 1.65;
@@ -289,7 +291,7 @@ ORVEX CORP  ←─────────────────────�
 
   <h3>Header Analysis: Why Every Gate Passed</h3>
 
-<pre>Return-Path: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="385a51545451565f78425d544e485941165b5755">[email&#160;protected]</a>&gt;
+<pre>Return-Path: &lt;billing@zelvpay.com&gt;
 Received: from mail.zelvpay.com (198.51.100.47)
 DKIM-Signature: v=1; a=rsa-sha256; d=zelvpay.com
 Authentication-Results:
@@ -321,14 +323,14 @@ Attacker domain:       zelvpay.com
 
   <h3>Thread Reconstruction via Message-ID</h3>
 
-<pre>Message 1:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a4c7cbcad0c5c7d0e4dec1c8d2c5d4c5dd8ac7cbc9">[email&#160;protected]</a>           ← real vendor
-             Message-ID: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f1b0c1c1c0b18b949d8790819088df929e9c">[email&#160;protected]</a>&gt;
+<pre>Message 1:   From: contact@zelvapay.com           ← real vendor
+             Message-ID: &lt;A001@zelvapay.com&gt;
 
-Message 2:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f59c9b8190879b9499d880869087b59a8783908d969a8785db969a98">[email&#160;protected]</a>     ← internal reply
-             In-Reply-To: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="185928282958627d746e79687961367b7775">[email&#160;protected]</a>&gt;
+Message 2:   From: internal-user@orvexcorp.com     ← internal reply
+             In-Reply-To: &lt;A001@zelvapay.com&gt;
 
-Message 3:   From: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8be9e2e7e7e2e5eccbf1eee7fdfbeaf2a5e8e4e6">[email&#160;protected]</a>            ← attacker enters here
-             In-Reply-To: &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3c7d0c0c0d7c4659504a5d4c5d45125f5351">[email&#160;protected]</a>&gt;     ← correctly references real thread</pre>
+Message 3:   From: billing@zelvpay.com            ← attacker enters here
+             In-Reply-To: &lt;A001@zelvapay.com&gt;     ← correctly references real thread</pre>
 
   <p>The attacker entered mid-thread. By that point, context and trust were already established between the real participants. Once inside, they were indistinguishable from anyone else in the conversation.</p>
 
@@ -375,7 +377,7 @@ zelvpay.com:    _dmarc → No record (NXDOMAIN response)</pre>
   <h3>Free Email Provider Used in Attack Chain</h3>
   <p>Analysis of the email headers revealed that at least one message in the attack chain originated from a free consumer email provider rather than the attacker's registered lookalike domain.</p>
 
-<pre>Expected:   <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7e1c1712121710193e041b12080e1f07501d1113">[email&#160;protected]</a>     ← registered lookalike domain
+<pre>Expected:   billing@zelvpay.com     ← registered lookalike domain
 Observed:   [attacker]@freemail.com    ← free consumer provider, no corporate infrastructure</pre>
 
   <p>A free email address in a corporate financial thread is a hard stop. Should be an automatic escalation trigger. It wasn't.</p>

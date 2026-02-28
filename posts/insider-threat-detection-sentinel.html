@@ -319,7 +319,7 @@
   <p>Go to <strong>Sentinel → Watchlists → + New</strong>. Create a watchlist named <code>HighRiskDepartures</code> with three columns:</p>
 
 <pre>UPN,DisplayName,OffboardingDate
-<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0f65606761216b606a4f6c60617b607c60216c6062">[email&#160;protected]</a>,John Doe,2026-01-15T00:00:00Z</pre>
+john.doe@contoso.com,John Doe,2026-01-15T00:00:00Z</pre>
 
   <p>Use ISO 8601 format for <code>OffboardingDate</code> exactly as shown. <code>todatetime()</code> silently returns null on anything else — short dates, regional formats, Excel auto-formatting — and the date filtering disappears with no error. Monitoring begins when a UPN is added; <code>OffboardingDate</code> is available for custom filtering but the core rules don't require a date join in every query.</p>
   <p>Verify it loaded correctly:</p>

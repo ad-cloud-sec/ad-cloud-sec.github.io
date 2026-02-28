@@ -7,17 +7,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1a1a1a;
-    --ink-light: #4a4a4a;
-    --ink-muted: #888;
-    --rule: #d4d0c8;
-    --accent: #a0522d;
-    --page: #faf9f6;
-    --code-bg: #f5f4f0;
+    --ink: #e8e2d9;
+    --ink-light: #a89f8c;
+    --ink-muted: #6b6457;
+    --rule: #2a2d36;
+    --accent: #c9933a;
+    --page: #1c1f26;
+    --code-bg: #13151a;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     background: var(--page);
     color: var(--ink);
@@ -26,7 +24,6 @@
     line-height: 1.75;
     font-weight: 300;
   }
-
   /* ── Nav ── */
   nav {
     border-bottom: 1px solid var(--rule);
@@ -37,7 +34,6 @@
     max-width: 1000px;
     margin: 0 auto;
   }
-
   .nav-logo {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
@@ -46,13 +42,11 @@
     color: var(--ink);
     text-decoration: none;
   }
-
   .nav-links {
     display: flex;
     gap: 32px;
     list-style: none;
   }
-
   .nav-links a {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -62,9 +56,7 @@
     text-decoration: none;
     transition: color 0.2s;
   }
-
   .nav-links a:hover { color: var(--accent); }
-
   /* ── Hero ── */
   .hero {
     max-width: 1000px;
@@ -72,7 +64,6 @@
     padding: 80px 40px 64px;
     border-bottom: 1px solid var(--rule);
   }
-
   .hero-kicker {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -81,7 +72,6 @@
     color: var(--accent);
     margin-bottom: 24px;
   }
-
   .hero h1 {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: clamp(36px, 6vw, 64px);
@@ -92,7 +82,6 @@
     max-width: 700px;
     margin-bottom: 28px;
   }
-
   .hero-bio {
     max-width: 580px;
     font-size: 18px;
@@ -101,13 +90,11 @@
     line-height: 1.7;
     margin-bottom: 36px;
   }
-
   .hero-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
   }
-
   .tag {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -118,14 +105,12 @@
     color: var(--ink-light);
     padding: 5px 12px;
   }
-
   /* ── Writing section ── */
   .writing {
     max-width: 1000px;
     margin: 0 auto;
     padding: 56px 40px 80px;
   }
-
   .section-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -136,13 +121,11 @@
     padding-bottom: 12px;
     border-bottom: 1px solid var(--rule);
   }
-
   .post-list {
     display: flex;
     flex-direction: column;
     gap: 0;
   }
-
   .post-item {
     display: grid;
     grid-template-columns: 100px 1fr;
@@ -153,10 +136,8 @@
     color: inherit;
     transition: opacity 0.2s;
   }
-
   .post-item:hover { opacity: 0.75; }
   .post-item:first-child { padding-top: 0; }
-
   .post-date {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
@@ -164,9 +145,7 @@
     padding-top: 6px;
     white-space: nowrap;
   }
-
   .post-content {}
-
   .post-category {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
@@ -175,7 +154,6 @@
     color: var(--accent);
     margin-bottom: 8px;
   }
-
   .post-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 22px;
@@ -184,7 +162,6 @@
     color: var(--ink);
     margin-bottom: 10px;
   }
-
   .post-excerpt {
     font-size: 16px;
     color: var(--ink-light);
@@ -192,7 +169,6 @@
     line-height: 1.6;
     max-width: 560px;
   }
-
   .post-read {
     display: inline-block;
     margin-top: 14px;
@@ -204,14 +180,12 @@
     border-bottom: 1px solid var(--accent);
     padding-bottom: 1px;
   }
-
   /* ── About strip ── */
   .about {
-    background: var(--ink);
-    color: var(--page);
+    background: #13151a;
+    color: var(--ink);
     padding: 56px 40px;
   }
-
   .about-inner {
     max-width: 1000px;
     margin: 0 auto;
@@ -220,44 +194,38 @@
     gap: 80px;
     align-items: start;
   }
-
   .about h2 {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 28px;
     font-weight: 700;
     margin-bottom: 20px;
-    color: var(--page);
+    color: var(--ink);
   }
-
   .about p {
     font-size: 16px;
-    color: #c0bdb5;
+    color: var(--ink-light);
     line-height: 1.75;
     font-weight: 300;
   }
-
   .about-stack {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
-
   .stack-item {
     display: flex;
     align-items: center;
     gap: 12px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
-    color: #c0bdb5;
+    color: var(--ink-light);
   }
-
   .stack-dot {
     width: 6px;
     height: 6px;
     background: var(--accent);
     flex-shrink: 0;
   }
-
   /* ── Footer ── */
   footer {
     border-top: 1px solid var(--rule);
@@ -268,14 +236,12 @@
     justify-content: space-between;
     align-items: center;
   }
-
   footer span {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--ink-muted);
     letter-spacing: 0.06em;
   }
-
   footer a {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -284,9 +250,7 @@
     letter-spacing: 0.06em;
     transition: color 0.2s;
   }
-
   footer a:hover { color: var(--accent); }
-
   @media (max-width: 700px) {
     nav, .hero, .writing, footer { padding-left: 20px; padding-right: 20px; }
     .about { padding: 40px 20px; }
@@ -298,7 +262,6 @@
 </style>
 </head>
 <body>
-
 <nav>
   <a href="/" class="nav-logo">AD · Cloud Security</a>
   <ul class="nav-links">
@@ -307,7 +270,6 @@
     <li><a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank">LinkedIn</a></li>
   </ul>
 </nav>
-
 <div class="hero">
   <div class="hero-kicker">Cloud Security &nbsp;·&nbsp; SaaS Security &nbsp;·&nbsp; Security Research &nbsp;·&nbsp; Detection Engineering</div>
   <h1>Security research from the practitioner's perspective.</h1>
@@ -323,11 +285,9 @@
     <span class="tag">AWS · Azure · GCP</span>
   </div>
 </div>
-
 <div class="writing">
   <div class="section-label">Writing</div>
   <div class="post-list">
-
     <a href="posts/insider-threat-detection-sentinel.html" class="post-item">
       <div class="post-date">Feb 2026</div>
       <div class="post-content">
@@ -337,7 +297,6 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
-
     <a href="posts/email-mitm-investigation.html" class="post-item">
       <div class="post-date">Feb 2026</div>
       <div class="post-content">
@@ -347,10 +306,8 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
-
   </div>
 </div>
-
 <div class="about" id="about">
   <div class="about-inner">
     <div>
@@ -369,11 +326,9 @@
     </div>
   </div>
 </div>
-
 <footer>
   <span>ad-cloud-sec.github.io</span>
   <a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank">LinkedIn →</a>
 </footer>
-
 </body>
 </html>

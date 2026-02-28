@@ -7,14 +7,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #e8e2d9;
-    --ink-light: #a89f8c;
-    --ink-muted: #6b6457;
-    --rule: #2a2d36;
-    --code-bg: #13151a;
-    --code-border: #2a2d36;
-    --accent: #c9933a;
-    --page: #1c1f26;
+    --ink: #1a1a1a;
+    --ink-light: #4a4a4a;
+    --ink-muted: #888;
+    --rule: #d4d0c8;
+    --code-bg: #f5f4f0;
+    --code-border: #e0ddd5;
+    --accent: #c0392b;
+    --page: #faf9f6;
     --max: 740px;
   }
 
@@ -127,8 +127,6 @@
     padding: 20px 24px;
     margin: 24px 0;
     overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     line-height: 1.65;
@@ -158,7 +156,7 @@
     border-left: 3px solid var(--accent);
     margin: 32px 0;
     padding: 16px 20px;
-    background: #22202a;
+    background: #fdf5f4;
   }
 
   .callout p {
@@ -275,11 +273,11 @@
 <meta property="og:type" content="article">
 <meta property="og:image" content="https://ad-cloud-sec.github.io/assets/offboarding-cover.svg">
 <meta name="twitter:image" content="https://ad-cloud-sec.github.io/assets/offboarding-cover.svg">
-<meta property="og:url" content="https://ad-cloud-sec.github.io/posts/insider-threat-detection-sentinel.html">
+<meta property="og:url" content="https://ad-cloud-sec.github.io/posts/offboarding-sentinel.html">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel">
 <meta name="twitter:description" content="Dynamic watchlists, ten KQL analytics rules covering every exfiltration and persistence path, and RBAC isolation.">
-<link rel="canonical" href="https://ad-cloud-sec.github.io/posts/insider-threat-detection-sentinel.html">
+<link rel="canonical" href="https://ad-cloud-sec.github.io/posts/offboarding-sentinel.html">
 </head>
 
 <body>
@@ -1542,10 +1540,18 @@ Reopen closed:      Enabled</pre>
     This article reflects generalized detection engineering patterns and does not represent any specific organisation's internal security architecture. All identifying details have been anonymized and technical configurations generalized.
   </div>
 
-<script data-cfasync="false">
+<script>
   document.querySelectorAll('.query-toggle').forEach(function(toggle) {
     toggle.addEventListener('click', function() {
       var content = this.nextElementSibling;
       var isOpen = content.classList.contains('open');
       content.classList.toggle('open');
-      t
+      this.classList.toggle('open');
+      this.setAttribute('aria-expanded', String(!isOpen));
+      this.querySelector('.toggle-label').textContent =
+        isOpen ? 'Show query' : 'Hide query';
+    });
+  });
+</script>
+</body>
+</html>

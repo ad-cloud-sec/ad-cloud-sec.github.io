@@ -7,14 +7,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1a1a1a;
-    --ink-light: #4a4a4a;
-    --ink-muted: #888;
+    --ink: #e8e2d9;
+    --ink-light: #a89f8c;
+    --ink-muted: #6b6457;
     --rule: #d4d0c8;
-    --code-bg: #f5f4f0;
-    --code-border: #e0ddd5;
-    --accent: #2c6e9e;
-    --page: #faf9f6;
+    --code-bg: #13151a;
+    --code-border: #2a2d36;
+    --accent: #c9933a;
+    --page: #1c1f26;
     --max: 740px;
   }
 
@@ -127,8 +127,6 @@
     padding: 20px 24px;
     margin: 24px 0;
     overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     line-height: 1.65;
@@ -158,7 +156,7 @@
     border-left: 3px solid var(--accent);
     margin: 32px 0;
     padding: 16px 20px;
-    background: #fdf5f4;
+    background: #22202a;
   }
 
   .callout p {
@@ -186,8 +184,8 @@
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    background: var(--ink);
-    color: var(--page);
+    background: #13151a;
+    color: var(--ink);
     padding: 3px 8px;
     margin-bottom: 10px;
   }
@@ -239,8 +237,8 @@
 
   <h2>The Setup: Why It Worked Before Anyone Noticed</h2>
   <p>The attacker didn't compromise anything. They registered a domain.</p>
-  <p><strong>Legitimate vendor domain:</strong> <code>zelvapay.com</code><br>
-  <strong>Attacker vendor domain:</strong> <code>zelvpay.com</code></p>
+  <p><strong>Legitimate domain:</strong> <code>zelvapay.com</code><br>
+  <strong>Attacker domain:</strong> <code>zelvpay.com</code></p>
   <p>One letter dropped. "Zelva Pay" became "Zelv Pay." Both look like real company names at a glance. That's it. That's the whole attack surface.</p>
   <p>But the domain registration was just the start. The attacker configured it to mirror the real vendor infrastructure exactly. Same MX provider. Valid SPF. Valid DKIM. No DMARC. Same as the vendor.</p>
   <p>When the emails arrived, every authentication check came back clean.</p>
@@ -256,16 +254,16 @@
 <pre>Attacker domain 1:   zelvpay.com     ← impersonates the vendor
                      (deceives Orvex Corp into thinking it's the real vendor)
 
-Attacker domain 2:   orvecorp.com    ← impersonates the victim company
+Attacker domain 2:   orvexcorp.com   ← impersonates the victim company
                      (deceives Zelva Pay into thinking it's Orvex Corp)</pre>
 
-  <p>The real vendor wasn't silent either. They were actively replying throughout the whole thing. But their replies were going to <code>orvecorp.com</code>, the attacker's inbox. Orvex Corp's emails were going to <code>zelvpay.com</code>, which was also the attacker.</p>
+  <p>The real vendor wasn't silent either. They were actively replying throughout the whole thing. But their replies were going to <code>orvexcorp.com</code>, the attacker's inbox. Orvex Corp's emails were going to <code>zelvpay.com</code>, which was also the attacker.</p>
   <p>The attacker sat in the middle. Reading everything. Forwarding selectively. Controlling both sides of the conversation.</p>
 
 <pre>Reality of the communication flow:
 
 ORVEX CORP  → zelvpay.com (attacker) → ZELVA PAY NEVER RECEIVED IT
-ZELVA PAY  → orvecorp.com (attacker) → ORVEX CORP NEVER RECEIVED IT
+ZELVA PAY  → orvexcorp.com (attacker) → ORVEX CORP NEVER RECEIVED IT
 
 What both sides thought was happening:
 ORVEX CORP  ←────────────────────────────→ ZELVA PAY</pre>
@@ -297,7 +295,7 @@ DKIM-Signature: v=1; a=rsa-sha256; d=zelvpay.com
 Authentication-Results:
   spf=pass (zelvpay.com: 198.51.100.47 is authorized)
   dkim=pass header.d=zelvpay.com
-  dmarc=none (no policy found for zelvpay.com)</pre>
+  dmarc=pass action=none header.from=zelvpay.com</pre>
 
   <p>Everything passed. Because it was all valid for the attacker's domain.</p>
   <p>SPF, DKIM, and DMARC validate <strong>sending infrastructure</strong>. That's it. They don't tell you whether a domain should actually be trusted by your organization.</p>
@@ -318,7 +316,7 @@ Attacker domain:       zelvpay.com
   SPF:                 v=spf1 include:[cloud-mail-provider] ~all
   DMARC:               Not configured</pre>
 
-  <p>The attacker mirrored the vendor's mail setup deliberately. Same class of MX provider, same SPF structure, same absence of DMARC. To any mail server or email gateway, both domains looked functionally identical.</p>
+  <p>The attacker mirrored the vendor's mail setup deliberately. Same MX provider, same configuration. To any mail server or email gateway, both domains looked identical.</p>
   <p>Months in advance. This wasn't opportunistic.</p>
 
   <h3>Thread Reconstruction via Message-ID</h3>
@@ -372,7 +370,8 @@ zelvpay.com:    _dmarc → No record (NXDOMAIN response)</pre>
   <hr>
 
   <h2>What the Investigation Revealed</h2>
-  
+  <p>The domain forensics told one story. The investigation surfaced a few more.</p>
+
   <div class="indicator-label">Indicator 1</div>
   <h3>Free Email Provider Used in Attack Chain</h3>
   <p>Analysis of the email headers revealed that at least one message in the attack chain originated from a free consumer email provider rather than the attacker's registered lookalike domain.</p>
@@ -455,7 +454,7 @@ zelvpay.com      ← impersonates vendor
   Configured:       Cloud mail infrastructure + SPF active immediately
   Purpose:          Deceive Orvex Corp
 
-orvecorp.com     ← impersonates victim organization
+orvexcorp.com    ← impersonates victim organization
   Registered:       Within the same short window
   Configured:       Cloud-based mail infrastructure
   Purpose:          Deceive Zelva Pay
@@ -474,7 +473,7 @@ Time between registration and attack execution: short window</pre>
   <hr>
 
   <h2>The Authentication Posture Problem</h2>
-  <p>Post-incident authentication review commonly surfaces gaps on the targeted organisation's own domain.</p>
+  <p>Post-incident authentication review surfaced a gap on the victim's own domain too.</p>
   <p>DMARC wasn't at <code>p=reject</code>. No aggregate reporting either, so no visibility into who was spoofing the domain. Moving to full rejection with reporting fixed both problems.</p>
   <p>Won't stop a lookalike attack. But it closes the spoofing vector and gives you visibility into who's trying.</p>
   <p>SPF had multiple authorized senders: cloud mail, marketing tools, CRM. Normal for any enterprise. But you need to validate DKIM alignment on each one before pushing to reject. Move too fast and you break legitimate mail.</p>
@@ -523,9 +522,7 @@ Time between registration and attack execution: short window</pre>
   <h2>The Uncomfortable Truth</h2>
   <p>Every technical gate passed. Authentication worked. Gateway worked. SIEM worked. Nothing failed in the way security tools are designed to detect failure.</p>
   <p>The failure was architectural. No security control was asking: <em>should this entity be trusted by this business, for this specific request, right now?</em></p>
-
   <p>Email authentication answers one question: is this message legitimately from the domain it claims? It doesn't answer whether that domain should be trusted for financial instructions. That's a business context question. It requires vendor registries, verified contact lists, mandatory verification workflows, and thread-aware detection. Until organizations start threat-modeling their financial workflows the same way they threat-model their infrastructure, BEC will keep working.</p>
-
   <p>The fix isn't better email security tooling. It's building verification into the workflow itself.</p>
 
   <div class="callout">

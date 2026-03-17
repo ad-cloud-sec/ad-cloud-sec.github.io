@@ -4,26 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #e8e2d9;
     --ink-light: #a89f8c;
     --ink-muted: #6b6457;
-    --rule: #2a2d36;
-    --code-bg: #13151a;
-    --code-border: #2a2d36;
-    --accent: #c9933a;
-    --page: #1c1f26;
+    --rule: #1e2130;
+    --code-bg: #0c0e14;
+    --code-border: #1e2130;
+    --accent: #38b2ac;
+    --page: #0f1117;
     --max: 740px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #0f1117 !important; color-scheme: dark; }
 
   body {
     background: var(--page);
     color: var(--ink);
-    font-family: 'Source Serif 4', Georgia, serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 18px;
     line-height: 1.75;
     font-weight: 300;
@@ -44,7 +45,7 @@
   }
 
   .kicker {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 11px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -53,7 +54,7 @@
   }
 
   h1 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
     font-size: clamp(28px, 5vw, 42px);
     font-weight: 900;
     line-height: 1.15;
@@ -74,7 +75,7 @@
 
   /* ── Section headings ── */
   h2 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
     font-size: 24px;
     font-weight: 700;
     margin: 56px 0 16px;
@@ -84,7 +85,7 @@
   }
 
   h3 {
-    font-family: 'Source Serif 4', Georgia, serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 17px;
     font-weight: 600;
     margin: 36px 0 12px;
@@ -111,7 +112,7 @@
   }
 
   code {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 14px;
     background: var(--code-bg);
     padding: 1px 5px;
@@ -127,9 +128,7 @@
     padding: 20px 24px;
     margin: 24px 0;
     overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 13px;
     line-height: 1.65;
     color: var(--ink);
@@ -158,7 +157,7 @@
     border-left: 3px solid var(--accent);
     margin: 32px 0;
     padding: 16px 20px;
-    background: #22202a;
+    background: #1a1d27;
   }
 
   .callout p {
@@ -182,7 +181,7 @@
   /* ── Indicator labels ── */
   .indicator-label {
     display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -208,7 +207,7 @@
     margin: 0 auto;
   }
   .site-nav a {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 11px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -234,7 +233,7 @@
     border: 1px solid var(--code-border);
     border-left: 3px solid var(--ink-muted);
     padding: 10px 16px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 12px;
     color: var(--ink-muted);
     letter-spacing: 0.05em;
@@ -268,38 +267,52 @@
     border-top: none;
   }
 
+  footer { border-top: 1px solid var(--rule); padding: 24px 40px; max-width: 820px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+  footer span { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); letter-spacing: 0.06em; }
+  footer a { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); text-decoration: none; letter-spacing: 0.06em; }
+  footer a:hover { color: var(--accent); }
 </style>
 <meta name="description" content="A complete Microsoft Sentinel insider threat detection program for employee offboarding: dynamic watchlist, ten KQL analytics rules, alert fusion, monitoring workbook, and RBAC isolation.">
 <meta property="og:title" content="Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel">
 <meta property="og:description" content="Dynamic watchlists, ten KQL analytics rules, alert fusion, a monitoring workbook, and RBAC isolation.">
 <meta property="og:type" content="article">
-<meta property="og:image" content="https://ad-cloud-sec.github.io/assets/offboarding-cover.svg">
-<meta name="twitter:image" content="https://ad-cloud-sec.github.io/assets/offboarding-cover.svg">
 <meta property="og:url" content="https://ad-cloud-sec.github.io/posts/insider-threat-detection-sentinel.html">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel">
 <meta name="twitter:description" content="Dynamic watchlists, ten KQL analytics rules covering every exfiltration and persistence path, and RBAC isolation.">
 <link rel="canonical" href="https://ad-cloud-sec.github.io/posts/insider-threat-detection-sentinel.html">
+<meta name="twitter:label1" content="Reading time">
+<meta name="twitter:data1" content="18 minutes">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel",
+  "description": "A complete Microsoft Sentinel insider threat detection program: dynamic watchlist, ten KQL analytics rules, alert fusion, monitoring workbook, and RBAC isolation.",
+  "author": {"@type": "Person", "name": "Amardip Deshpande", "url": "https://ad-cloud-sec.github.io"},
+  "datePublished": "2026-02-01",
+  "dateModified": "2026-02-01",
+  "publisher": {"@type": "Organization", "name": "AD Cloud Security", "url": "https://ad-cloud-sec.github.io"},
+  "url": "https://ad-cloud-sec.github.io/posts/insider-threat-detection-sentinel.html",
+  "keywords": ["Microsoft Sentinel","KQL","Insider Threat","Detection Engineering","Employee Offboarding","RBAC","Azure","MITRE ATT&CK"]
+}
+</script>
 </head>
 
 <body>
-<nav class="site-nav">
+<nav class="site-nav" aria-label="Main navigation">
   <a href="/" class="logo">AD · Cloud Security</a>
-  <a href="/">← All Posts</a>
+  <a href="/" aria-label="Back to all posts">← All Posts</a>
 </nav>
-<div class="page">
+<main class="page"><article>
 
-  <div class="masthead">
+  <header class="masthead">
     <div class="kicker">Detection Engineering &nbsp;·&nbsp; Microsoft Sentinel &nbsp;·&nbsp; Insider Threat</div>
     <h1>Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel</h1>
     <p class="deck">A practical walkthrough: dynamic watchlists, ten KQL analytics rules, alert fusion, a monitoring workbook, and RBAC isolation.</p>
   </div>
 
   <p>Insider threat during employee offboarding is one of the hardest risks to operationalise detection for. The window between HR initiating separation and IT completing revocation is where most incidents happen, and most organisations have nothing watching it.</p>
-
-    <div class="callout">
-    <p>Identity lifecycle tools remove access. They do not monitor behaviour during the revocation window. This program fills that gap.</p>
-    </div>
 
   <hr>
 
@@ -323,12 +336,12 @@
   <p>Go to <strong>Sentinel → Watchlists → + New</strong>. Create a watchlist named <code>HighRiskDepartures</code> with three columns:</p>
 
 <pre>UPN,DisplayName,OffboardingDate
-john.doe@contoso.com,John Doe,2026-01-15T00:00:00Z</pre>
+<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="63090c0b0d4d070c0623000c0d170c100c4d000c0e">[email&#160;protected]</a>,John Doe,2026-01-15T00:00:00Z</pre>
 
   <p>Use ISO 8601 format for <code>OffboardingDate</code> exactly as shown. <code>todatetime()</code> silently returns null on anything else — short dates, regional formats, Excel auto-formatting — and the date filtering disappears with no error. Monitoring begins when a UPN is added; <code>OffboardingDate</code> is available for custom filtering but the core rules don't require a date join in every query.</p>
   <p>Verify it loaded correctly:</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>_GetWatchlist('HighRiskDepartures')
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>_GetWatchlist('HighRiskDepartures')
 | project UPN, DisplayName, OffboardingDate = todatetime(OffboardingDate)
 | where isnotnull(OffboardingDate)</pre></div></div>
 
@@ -352,7 +365,7 @@ john.doe@contoso.com,John Doe,2026-01-15T00:00:00Z</pre>
   <h3>Rule 1 — Bulk File Activity Across All Locations</h3>
   <p>Four-source union: SharePoint/OneDrive/Teams, Exchange attachments, MDE endpoint, and Azure Storage. Fires when total file operations exceed 50 in the window. Activity across more than two sources simultaneously triggers Critical regardless of volume.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
 let timeWindow = ago(1h);
 union
 (
@@ -448,7 +461,7 @@ union
   <h3>Rule 2 — Email Forwarding Rule Created</h3>
   <p>Uses <code>mv-expand</code> to properly parse the Parameters array rather than a simple string match — catches forwarding rules that a <code>has_any</code> approach would miss. Covers rule creation and modification across four operations. Any single match fires immediately with no volume threshold.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
 let timeWindow = ago(1h);
 OfficeActivity
 | where TimeGenerated > timeWindow
@@ -494,7 +507,7 @@ OfficeActivity
   <h3>Rule 3 — External File Sharing Detected</h3>
   <p>Four-part union covering SharePoint, Teams, Exchange, and OneDrive full folder sync. Anonymous link creation triggers Critical immediately. Replace the domain placeholders with your actual tenant domains before deploying.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
 let timeWindow = ago(30m);
 let internalDomain = "contoso.com";
 let internalDomainAlt = "contoso.onmicrosoft.com";
@@ -634,7 +647,7 @@ union SharePointSharing, TeamsSharing,
   <h3>Rule 4 — Sign-In from Unusual Location</h3>
   <p>Builds a 60-day historical baseline per user using <code>set_has_element</code> for accurate set membership checks. Flags new countries, new cities, risky sign-ins from Entra ID Identity Protection, and unmanaged or non-compliant devices. Weighted scoring — new country combined with a risky sign-in scores 10, the highest single-event weight in the program.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
     _GetWatchlist('HighRiskDepartures') | project UPN);
 let timeWindow = ago(1h);
 let lookbackWindow = ago(60d);
@@ -724,7 +737,7 @@ RecentSignIns
   <h3>Rule 5 — USB and Removable Storage Write</h3>
   <p>Three parts: USB device connection events, file writes detected via drive letter regex (<code>[E-Z]:\</code> — more reliable than path string matching), and sensitive file type detection on removable storage. The regex approach catches mapped network drives and non-standard removable paths that a simple <code>has "Removable"</code> filter misses.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
     _GetWatchlist('HighRiskDepartures') | project UPN);
 let timeWindow = ago(30m);
 let USBConnections =
@@ -820,7 +833,7 @@ union USBConnections, RemovableStorageWrites, SensitiveFileWrites
   <h3>Rule 6 — Privileged Role Assignment Initiated</h3>
   <p>Four parts: Entra ID direct and eligible role assignments, application and service principal owner changes, Azure RBAC assignments at subscription level, and privileged group membership changes. The group membership part filters by group name keywords (Admin, Global, Privileged, etc.) — targeted to reduce noise from routine group changes.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
     _GetWatchlist('HighRiskDepartures') | project UPN);
 let timeWindow = ago(15m);
 let RoleAssignments =
@@ -950,7 +963,7 @@ union RoleAssignments, AppOwnerChanges,
   <h3>Rule 7 — Sensitive Azure Resource Access</h3>
   <p>Five parts covering Key Vault (secrets, keys, certificates), Storage Account (key listing, SAS generation, deletions), Database exports and firewall rule changes, Compute snapshot and disk export operations, and Resource Group deletions. Deletion operations score 9-10 — the highest risk weights in this rule — because destruction can be as damaging as exfiltration.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
     _GetWatchlist('HighRiskDepartures') | project UPN);
 let timeWindow = ago(15m);
 let KeyVaultAccess =
@@ -1122,7 +1135,7 @@ union KeyVaultAccess, StorageAccess, DatabaseAccess,
   <h3>Rule 8 — Backdoor App Registration Detected</h3>
   <p>Five parts: new app registrations, credential additions to existing apps, new service principals, OAuth permission grants, and federated identity credentials. Credential additions and federated identity creds both score 10 — they enable non-interactive auth that survives account termination. Alert grouping is disabled; every event gets individual review.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
     _GetWatchlist('HighRiskDepartures') | project UPN);
 let timeWindow = ago(15m);
 let NewAppRegistration =
@@ -1272,7 +1285,7 @@ union NewAppRegistration, CredentialsAdded,
   <h3>Rule 9 — Mass Email Send with Attachments</h3>
   <p>Three sources: OfficeActivity Exchange Send events, Defender EmailEvents for attachment metadata, and EmailAttachmentInfo for file type detection. Sensitive file to personal domain scores 10. Fires on any single match — no volume threshold required.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = materialize(
     _GetWatchlist('HighRiskDepartures') | project UPN);
 let timeWindow = ago(30m);
 let internalDomain = "contoso.com";
@@ -1427,7 +1440,7 @@ union BulkEmailSend, DefenderEmailEvents, SensitiveAttachments
   <h3>Rule 10 — After Hours Activity Detected</h3>
   <p>Flags sign-ins and Azure activity outside normal working hours (07:00–20:00). Covers a behavioural detection gap the other rules don't address. Behavioural baseline: occasional late activity is normal for IT staff. The same user active every night during their final week is a different pattern. Adjust the hour thresholds to match your organisation's actual working hours before deploying.</p>
 
-<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false" onclick="var c=this.nextElementSibling;var o=c.classList.contains('open');c.classList.toggle('open');this.classList.toggle('open');this.setAttribute('aria-expanded',String(!o));this.querySelector('.toggle-label').textContent=o?'Show query':'Hide query';"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
+<div class="query-block"><div class="query-toggle" role="button" aria-expanded="false"><span class="toggle-arrow">▶</span><span class="toggle-label">Show query</span></div><div class="query-content"><pre>let watchlist = _GetWatchlist('HighRiskDepartures') | project UPN;
 union
 (
     SigninLogs
@@ -1543,7 +1556,29 @@ Reopen closed:      Enabled</pre>
   </div>
 
   <div class="disclaimer">
-    This article reflects generalized detection engineering patterns. All configurations are illustrative — replace placeholder values before deployment. Insider threat monitoring programs must comply with applicable employment law, data protection regulations, and organizational policy. Obtain documented authorization from HR and Legal before adding any individual to a watchlist.
+    This article reflects generalized detection engineering patterns and does not represent any specific organisation's internal security architecture. All identifying details have been anonymized and technical configurations generalized.
   </div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  document.querySelectorAll('.query-toggle').forEach(function(toggle) {
+    toggle.addEventListener('click', function() {
+      var content = this.nextElementSibling;
+      var isOpen = content.classList.contains('open');
+      content.classList.toggle('open');
+      t      this.setAttribute('aria-expanded', String(!isOpen));
+      this.querySelector('.toggle-label').textContent = isOpen ? 'Show query' : 'Hide query';
+    });
+  });
+</script>
+
+</section>
+</article>
+</main>
+
+<footer>
+  <span>ad-cloud-sec.github.io</span>
+  <a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank" rel="noopener noreferrer">LinkedIn &rarr;</a>
+</footer>
+
 </body>
 </html>

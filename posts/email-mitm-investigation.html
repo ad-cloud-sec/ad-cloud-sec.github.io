@@ -3,200 +3,69 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Two Look-Alike Domains. One Email Man-in-the-Middle.</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Two Look-Alike Domains. One Email Man-in-the-Middle. · AD · Cloud Security</title>
+<meta name="description" content="A full email MitM attack where two companies were actively communicating throughout the entire incident. Neither receiving a single real message from the other. SPF passed. DKIM passed. DMARC passed.">
+<link rel="canonical" href="https://ad-cloud-sec.github.io/posts/email-mitm-investigation.html">
+<meta property="og:title" content="Two Look-Alike Domains. One Email Man-in-the-Middle. Nobody Noticed Until It Was Too Late.">
+<meta property="og:description" content="By the time security got involved, there was no malware to sandbox. No credential to reset. No exploit to reverse. Just an email thread between professionals and a payment that went to the wrong account.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ad-cloud-sec.github.io/posts/email-mitm-investigation.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Two Look-Alike Domains. One Email Man-in-the-Middle.">
+<meta name="twitter:description" content="SPF passed. DKIM passed. DMARC passed. Every technical gate cleared. The attack still succeeded.">
+<meta name="twitter:label1" content="Reading time">
+<meta name="twitter:data1" content="14 minutes">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Two Look-Alike Domains. One Email Man-in-the-Middle. Nobody Noticed Until It Was Too Late.",
+  "description": "A full email MitM attack where two companies were actively communicating throughout. Neither receiving a single real message from the other. SPF passed. DKIM passed. DMARC passed.",
+  "author": {
+    "@type": "Person",
+    "name": "Amardip Deshpande",
+    "url": "https://ad-cloud-sec.github.io"
+  },
+  "datePublished": "2026-02-01",
+  "dateModified": "2026-02-01",
+  "publisher": {
+    "@type": "Organization",
+    "name": "AD Cloud Security",
+    "url": "https://ad-cloud-sec.github.io"
+  },
+  "url": "https://ad-cloud-sec.github.io/posts/email-mitm-investigation.html",
+  "keywords": ["BEC","Email Security","DNS Security","DMARC","SPF","DKIM","Incident Analysis","Lookalike Domain","Email MitM","Detection Engineering"]
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #e8e2d9;
     --ink-light: #a89f8c;
     --ink-muted: #6b6457;
-    --rule: #d4d0c8;
-    --code-bg: #13151a;
-    --code-border: #2a2d36;
-    --accent: #c9933a;
-    --page: #1c1f26;
+    --rule: #1e2130;
+    --code-bg: #0c0e14;
+    --code-border: #1e2130;
+    --accent: #38b2ac;
+    --page: #0f1117;
     --max: 740px;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
+  html, body { background: #0f1117 !important; color-scheme: dark; }
   body {
     background: var(--page);
     color: var(--ink);
-    font-family: 'Source Serif 4', Georgia, serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 18px;
     line-height: 1.75;
     font-weight: 300;
   }
-
   .page {
     max-width: var(--max);
     margin: 0 auto;
     padding: 80px 40px 120px;
   }
-
-  /* ── Header ── */
-  .masthead {
-    border-top: 3px solid var(--ink);
-    border-bottom: 1px solid var(--ink);
-    padding: 32px 0 28px;
-    margin-bottom: 56px;
-  }
-
-  .kicker {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 20px;
-  }
-
-  h1 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(28px, 5vw, 42px);
-    font-weight: 900;
-    line-height: 1.15;
-    color: var(--ink);
-    letter-spacing: -0.02em;
-  }
-
-  .deck {
-    margin-top: 20px;
-    font-size: 18px;
-    font-style: italic;
-    color: var(--ink-light);
-    line-height: 1.6;
-    font-weight: 300;
-    border-left: 2px solid var(--accent);
-    padding-left: 16px;
-  }
-
-  /* ── Section headings ── */
-  h2 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 24px;
-    font-weight: 700;
-    margin: 56px 0 16px;
-    color: var(--ink);
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  h3 {
-    font-family: 'Source Serif 4', Georgia, serif;
-    font-size: 17px;
-    font-weight: 600;
-    margin: 36px 0 12px;
-    color: var(--ink);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-style: normal;
-  }
-
-  /* ── Body text ── */
-  p {
-    margin-bottom: 20px;
-    color: var(--ink);
-  }
-
-  p strong {
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  p em {
-    font-style: italic;
-    color: var(--ink-light);
-  }
-
-  code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px;
-    background: var(--code-bg);
-    padding: 1px 5px;
-    border-radius: 3px;
-    color: var(--accent);
-  }
-
-  /* ── Code blocks ── */
-  pre {
-    background: var(--code-bg);
-    border: 1px solid var(--code-border);
-    border-left: 3px solid var(--ink-muted);
-    padding: 20px 24px;
-    margin: 24px 0;
-    overflow-x: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    line-height: 1.65;
-    color: var(--ink);
-  }
-
-  /* ── Rule ── */
-  hr {
-    border: none;
-    border-top: 1px solid var(--rule);
-    margin: 48px 0;
-  }
-
-  /* ── Lists ── */
-  ul {
-    margin: 16px 0 20px 0;
-    padding-left: 20px;
-  }
-
-  ul li {
-    margin-bottom: 8px;
-    padding-left: 6px;
-  }
-
-  /* ── Callout / pull quote ── */
-  .callout {
-    border-left: 3px solid var(--accent);
-    margin: 32px 0;
-    padding: 16px 20px;
-    background: #22202a;
-  }
-
-  .callout p {
-    margin: 0;
-    font-size: 17px;
-    color: var(--ink);
-    font-weight: 400;
-  }
-
-  /* ── Disclaimer ── */
-  .disclaimer {
-    margin-top: 64px;
-    padding-top: 24px;
-    border-top: 1px solid var(--rule);
-    font-size: 14px;
-    color: var(--ink-muted);
-    font-style: italic;
-    text-align: center;
-  }
-
-  /* ── Indicator labels ── */
-  .indicator-label {
-    display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: #13151a;
-    color: var(--ink);
-    padding: 3px 8px;
-    margin-bottom: 10px;
-  }
-
-  @media (max-width: 600px) {
-    .page { padding: 40px 20px 80px; }
-    pre { font-size: 12px; padding: 16px; }
-  }
-</style>
-</head>
-<style>
+  /* ── Nav ── */
   .site-nav {
     border-bottom: 1px solid var(--rule);
     padding: 20px 40px;
@@ -207,7 +76,7 @@
     margin: 0 auto;
   }
   .site-nav a {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 11px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -217,78 +86,219 @@
   .site-nav a:hover { color: var(--accent); }
   .site-nav .logo { color: var(--ink); }
   @media (max-width: 600px) { .site-nav { padding: 16px 20px; } }
+  /* ── Masthead ── */
+  .masthead {
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 32px 0 28px;
+    margin-bottom: 56px;
+  }
+  .kicker {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: clamp(26px, 5vw, 40px);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .deck {
+    margin-top: 20px;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--ink-light);
+    line-height: 1.6;
+    font-weight: 300;
+    border-left: 2px solid var(--accent);
+    padding-left: 16px;
+  }
+  /* ── Section headings ── */
+  h2 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 56px 0 16px;
+    color: var(--ink);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    margin: 36px 0 12px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  /* ── Body text ── */
+  p {
+    margin-bottom: 20px;
+    color: var(--ink);
+  }
+  p strong {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  p em {
+    font-style: italic;
+    color: var(--ink-light);
+  }
+  code {
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-left: 3px solid var(--ink-muted);
+    padding: 20px 24px;
+    margin: 24px 0;
+    overflow-x: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  /* ── Rule ── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 48px 0;
+  }
+  /* ── Lists ── */
+  ul {
+    margin: 16px 0 20px 0;
+    padding-left: 20px;
+  }
+  ul li {
+    margin-bottom: 8px;
+    padding-left: 6px;
+  }
+  /* ── Callout ── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    margin: 32px 0;
+    padding: 16px 20px;
+    background: #1a1d27;
+  }
+  .callout p {
+    margin: 0;
+    font-size: 17px;
+    color: var(--ink);
+    font-weight: 400;
+  }
+  /* ── Indicator labels ── */
+  .indicator-label {
+    display: inline-block;
+    font-family: 'Fira Code', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--code-bg);
+    color: var(--ink);
+    padding: 3px 8px;
+    margin-bottom: 10px;
+  }
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 24px 40px;
+    max-width: 820px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer span {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.06em;
+  }
+  footer a {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-decoration: none;
+    letter-spacing: 0.06em;
+  }
+  footer a:hover { color: var(--accent); }
+  @media (max-width: 600px) {
+    .page { padding: 40px 20px 80px; }
+    pre { font-size: 12px; padding: 16px; }
+  }
 </style>
+</head>
 <body>
-<nav class="site-nav">
+
+<nav class="site-nav" aria-label="Main navigation">
   <a href="/" class="logo">AD · Cloud Security</a>
-  <a href="/">← All Posts</a>
+  <a href="/" aria-label="Back to all posts">← All Posts</a>
 </nav>
-<div class="page">
 
-  <div class="masthead">
-    <div class="kicker">Email Security &nbsp;·&nbsp; DNS Security &nbsp;·&nbsp; Incident Analysis &nbsp;·&nbsp; Detection Engineering</div>
-    <h1>Two Look-Alike Domains. One Email Man-in-the-Middle. Nobody Noticed Until It Was Too Late.</h1>
-    <p class="deck">By the time security got involved, there was no malware to sandbox. No credential to reset. No exploit to reverse. Just an email thread between professionals and a payment that went to the wrong account.</p>
-  </div>
+<main class="page">
+<article>
+<header class="masthead">
+  <div class="kicker">Email Security &nbsp;·&nbsp; DNS Security &nbsp;·&nbsp; Incident Analysis &nbsp;·&nbsp; Detection Engineering</div>
+  <h1>Two Look-Alike Domains. One Email Man-in-the-Middle. Nobody Noticed Until It Was Too Late.</h1>
+  <p class="deck">By the time security got involved, there was no malware to sandbox. No credential to reset. No exploit to reverse. Just an email thread between professionals and a payment that went to the wrong account.</p>
+</header>
 
+<section>
   <p>This analysis reflects generalized patterns from documented BEC attack methodology. Technical artifacts illustrate actual attack techniques. All entities are fictional. The lessons are real.</p>
-
   <hr>
-
-  <h2>The Setup: Why It Worked Before Anyone Noticed</h2>
+  <h2 id="the-setup">The Setup: Why It Worked Before Anyone Noticed</h2>
   <p>The attacker didn't compromise anything. They registered a domain.</p>
   <p><strong>Legitimate domain:</strong> <code>zelvapay.com</code><br>
   <strong>Attacker domain:</strong> <code>zelvpay.com</code></p>
   <p>One letter dropped. "Zelva Pay" became "Zelv Pay." Both look like real company names at a glance. That's it. That's the whole attack surface.</p>
   <p>But the domain registration was just the start. The attacker configured it to mirror the real vendor infrastructure exactly. Same MX provider. Valid SPF. Valid DKIM. No DMARC. Same as the vendor.</p>
   <p>When the emails arrived, every authentication check came back clean.</p>
-
   <hr>
-
-  <h2>The Full Picture: This Wasn't One-Sided</h2>
+  <h2 id="the-full-picture">The Full Picture: This Wasn't One-Sided</h2>
   <p>This is where it gets more interesting than a typical BEC.</p>
   <p>Most BEC attacks work like this: attacker impersonates a vendor, victim gets deceived, damage is done. One fake domain. One victim.</p>
   <p>This attack ran two deceptions simultaneously.</p>
   <p><strong>The attacker registered two domains:</strong></p>
-
 <pre>Attacker domain 1:   zelvpay.com     ← impersonates the vendor
                      (deceives Orvex Corp into thinking it's the real vendor)
-
 Attacker domain 2:   orvexcorp.com   ← impersonates the victim company
                      (deceives Zelva Pay into thinking it's Orvex Corp)</pre>
-
   <p>The real vendor wasn't silent either. They were actively replying throughout the whole thing. But their replies were going to <code>orvexcorp.com</code>, the attacker's inbox. Orvex Corp's emails were going to <code>zelvpay.com</code>, which was also the attacker.</p>
   <p>The attacker sat in the middle. Reading everything. Forwarding selectively. Controlling both sides of the conversation.</p>
-
 <pre>Reality of the communication flow:
-
 ORVEX CORP  → zelvpay.com (attacker) → ZELVA PAY NEVER RECEIVED IT
 ZELVA PAY  → orvexcorp.com (attacker) → ORVEX CORP NEVER RECEIVED IT
-
 What both sides thought was happening:
 ORVEX CORP  ←────────────────────────────→ ZELVA PAY</pre>
-
   <ul>
     <li>Zelva Pay thought they were talking to Orvex Corp. They weren't.</li>
     <li>Orvex Corp thought they were talking to Zelva Pay. They weren't.</li>
     <li>Every reply, every update, every clarification went through the attacker first.</li>
     <li>Neither side had any reason to be suspicious. Responses kept coming.</li>
   </ul>
-
   <p>The real vendor had no idea any of this was happening. The impersonation ran entirely outside their infrastructure. Their replies went to the attacker. They had zero visibility into either side of the conversation.</p>
-
   <div class="callout">
     <p><strong>This is not phishing. This is a full email man-in-the-middle operation.</strong></p>
   </div>
-
   <p>No account compromise. No traffic interception. No malware. Just two domains and patience. Normal human communication did the rest.</p>
-
   <hr>
-
-  <h2>The Technical Evidence</h2>
-
+  <h2 id="technical-evidence">The Technical Evidence</h2>
   <h3>Header Analysis: Why Every Gate Passed</h3>
-
 <pre>Return-Path: &lt;billing@zelvpay.com&gt;
 Received: from mail.zelvpay.com (198.51.100.47)
 DKIM-Signature: v=1; a=rsa-sha256; d=zelvpay.com
@@ -296,100 +306,72 @@ Authentication-Results:
   spf=pass (zelvpay.com: 198.51.100.47 is authorized)
   dkim=pass header.d=zelvpay.com
   dmarc=pass action=none header.from=zelvpay.com</pre>
-
   <p>Everything passed. Because it was all valid for the attacker's domain.</p>
   <p>SPF, DKIM, and DMARC validate <strong>sending infrastructure</strong>. That's it. They don't tell you whether a domain should actually be trusted by your organization.</p>
-
   <h3>Infrastructure Comparison</h3>
-
 <pre>Legitimate domain:     zelvapay.com
   Registrar:           Major registrar
   Created:             Early 2000s
   MX:                  cloud-based mail routing infrastructure
   SPF:                 v=spf1 include:[cloud-mail-provider] ~all
   DMARC:               Not configured
-
 Attacker domain:       zelvpay.com
   Registrar:           Privacy-protected
   Created:             Several months before the attack
   MX:                  cloud-based mail routing infrastructure
   SPF:                 v=spf1 include:[cloud-mail-provider] ~all
   DMARC:               Not configured</pre>
-
   <p>The attacker mirrored the vendor's mail setup deliberately. Same MX provider, same configuration. To any mail server or email gateway, both domains looked identical.</p>
   <p>Months in advance. This wasn't opportunistic.</p>
-
   <h3>Thread Reconstruction via Message-ID</h3>
-
 <pre>Message 1:   From: contact@zelvapay.com           ← real vendor
              Message-ID: &lt;A001@zelvapay.com&gt;
-
 Message 2:   From: internal-user@orvexcorp.com     ← internal reply
              In-Reply-To: &lt;A001@zelvapay.com&gt;
-
 Message 3:   From: billing@zelvpay.com            ← attacker enters here
              In-Reply-To: &lt;A001@zelvapay.com&gt;     ← correctly references real thread</pre>
-
   <p>The attacker entered mid-thread. By that point, context and trust were already established between the real participants. Once inside, they were indistinguishable from anyone else in the conversation.</p>
-
   <hr>
-
-  <h2>What the Security Stack Saw</h2>
+  <h2 id="security-stack">What the Security Stack Saw</h2>
   <p>The organization had a standard enterprise setup. Email gateway, SIEM, MFA, EDR. Here's what each control saw:</p>
-
 <pre>Email Gateway:
   SPF check           → PASS  (valid for zelvpay.com)
   DKIM verification   → PASS  (valid signature for zelvpay.com)
   DMARC policy        → PASS  (no DMARC on attacker domain = no enforcement)
   Malware scan        → CLEAN (no payload, no URLs, plain text)
   Attachment sandbox  → N/A   (no attachments)
-
 SIEM:
   Authentication anomalies   → None
   Endpoint alerts            → None
   Lateral movement           → None
-
 What happened:             Successful impersonation. Serious operational impact.</pre>
-
   <p>Nothing failed. Every tool did what it was built to do. The attack lived in the gap between what email authentication validates and what business trust actually requires.</p>
-
   <h3>The DMARC Gap (Commonly Misunderstood)</h3>
   <p>Neither the legitimate vendor domain nor the attacker's lookalike had DMARC configured:</p>
-
 <pre>zelvapay.com:   _dmarc → No record (NXDOMAIN response)
 zelvpay.com:    _dmarc → No record (NXDOMAIN response)</pre>
-
   <p>This matters, but it's also widely misunderstood. Even if the vendor had DMARC at <code>p=reject</code>, it wouldn't have stopped this attack.</p>
   <p>DMARC protects against someone spoofing your domain. When an attacker registers a completely separate domain and sets up their own mail infrastructure, your DMARC record means nothing. They're not spoofing <code>zelvapay.com</code>. They own <code>zelvpay.com</code> and everything on it is legitimate from a protocol perspective.</p>
   <p>With no DMARC on either domain, both looked the same to any receiving mail server. Neither enforcing, neither rejecting. The symmetry actually made the switch harder to catch.</p>
-
   <div class="callout">
     <p><strong>DMARC is a spoofing defense. It is not a lookalike domain defense. These are different threat vectors requiring different controls.</strong></p>
   </div>
-
   <hr>
-
-  <h2>What the Investigation Revealed</h2>
+  <h2 id="investigation">What the Investigation Revealed</h2>
   <p>The domain forensics told one story. The investigation surfaced a few more.</p>
-
   <div class="indicator-label">Indicator 1</div>
   <h3>Free Email Provider Used in Attack Chain</h3>
   <p>Analysis of the email headers revealed that at least one message in the attack chain originated from a free consumer email provider rather than the attacker's registered lookalike domain.</p>
-
 <pre>Expected:   billing@zelvpay.com     ← registered lookalike domain
 Observed:   [attacker]@freemail.com    ← free consumer provider, no corporate infrastructure</pre>
-
   <p>A free email address in a corporate financial thread is a hard stop. Should be an automatic escalation trigger. It wasn't.</p>
-
   <div class="indicator-label">Indicator 2</div>
   <h3>Email Client Security Warnings Were Present but Ignored</h3>
   <p>The email client displayed security warnings on messages arriving from the unverified sender. These warnings were visible to the recipient and were not acted upon.</p>
   <p>When a warning is surfaced and dismissed without escalation, the technical control has functioned correctly. The process control has failed.</p>
   <div class="callout"><p><strong>The warning fired. The workflow did not have a step for what to do next.</strong></p></div>
-
   <div class="indicator-label">Indicator 3</div>
   <h3>Side-by-Side Technical Comparison of Vendor vs. Attacker Domain</h3>
-
 <pre>WHOIS COMPARISON
 ─────────────────────────────────────────────────────────
                         zelvapay.com      zelvpay.com
@@ -402,137 +384,106 @@ Registration length:    10+ years            1 year
 Nameservers:            Legacy provider NS   Cloud-based DNS
 DNSSEC:                 Unsigned             Unsigned
 ─────────────────────────────────────────────────────────
-
 MX RECORDS
 ─────────────────────────────────────────────────────────
 zelvapay.com:        mx001.[provider].net
                         mx002.[provider].net
-
 zelvpay.com:         cloud-based mail routing infrastructure
 ─────────────────────────────────────────────────────────
-
 SPF RECORDS
 ─────────────────────────────────────────────────────────
 zelvapay.com:        v=spf1 include:[legacy-mail-provider] ~all
 zelvpay.com:         v=spf1 include:[cloud-mail-provider] ~all
 ─────────────────────────────────────────────────────────
-
 DMARC
 ─────────────────────────────────────────────────────────
 zelvapay.com:        NOT CONFIGURED
 zelvpay.com:         NOT CONFIGURED (NXDOMAIN)
 ─────────────────────────────────────────────────────────
-
 A RECORD (web hosting)
 ─────────────────────────────────────────────────────────
 zelvapay.com:        No A record (not web-hosted)
 zelvpay.com:         Resolves to commodity shared hosting infrastructure
 ─────────────────────────────────────────────────────────</pre>
-
   <p>The legitimate domain is exactly what an established business looks like. Long registration history, legacy mail provider, no website. Boring in the best way.</p>
   <p>The attacker domain: privacy-protected, 1-year registration, stood up months before the attack. Mail infrastructure configured immediately. Commodity shared hosting IP, no history. No DMARC.</p>
   <p><strong>Neither domain had DMARC.</strong> No policy enforcement on either side. The attacker knew this and mirrored it deliberately.</p>
   <p>A vendor without DMARC can't protect against impersonation of their own domain. That gap becomes your gap the moment you start sending them money.</p>
-
   <div class="indicator-label">Indicator 4</div>
   <h3>Human Factors</h3>
   <p>Three human failures. Each one independent of the technical controls.</p>
   <p>Nobody caught the domain difference. When you're mid-thread with a vendor you've worked with for years, you're not scrutinizing sender addresses.</p>
   <p>No out-of-band verification when payment details changed. The request came in the middle of an ongoing conversation. It felt routine. That's the point.</p>
   <p>The attacker picked this vendor relationship specifically. Long history, established trust. Scrutiny goes down over time. That's the condition they were looking for.</p>
-
   <hr>
-
-  <h2>The Attack Campaign Fingerprint</h2>
+  <h2 id="attack-fingerprint">The Attack Campaign Fingerprint</h2>
   <p>One detail stands out above everything else. The clearest proof this wasn't opportunistic.</p>
   <p>Both domains. Registered within a short window of each other. Weeks before the attack started.</p>
-
 <pre>Domain registration timeline:
-
 zelvpay.com      ← impersonates vendor
   Registered:       Weeks before the attack
   Configured:       Cloud mail infrastructure + SPF active immediately
   Purpose:          Deceive Orvex Corp
-
 orvexcorp.com    ← impersonates victim organization
   Registered:       Within the same short window
   Configured:       Cloud-based mail infrastructure
   Purpose:          Deceive Zelva Pay
-
 Time between registration and attack execution: short window</pre>
-
   <p>The sequencing strongly suggests prior awareness of the vendor relationship. You don't register a lookalike of a specific vendor unless you already know that vendor is being used and money flows through them.</p>
   <p>There was a reconnaissance phase before any of this. Someone identified the relationship, identified both domain names, and registered lookalikes of both. Then waited.</p>
   <p>1-year registrations on both domains. Long enough to run the fraud and walk away. This was a targeted strike, not a long-term operation.</p>
   <p>Identical mail infrastructure on both domains. Single operator, repeatable playbook. The configuration choices aren't random. Major registrar, cloud MX, privacy protection, SPF softfail, no DMARC. That's a template.</p>
-
   <div class="callout">
     <p><strong>This is the difference between phishing and targeted fraud.</strong> Phishing is volume-based and opportunistic. What happened here was researched, prepared, and executed with specific knowledge of the target organization's vendor relationships. The infrastructure was built before the first email was sent.</p>
   </div>
-
   <hr>
-
-  <h2>The Authentication Posture Problem</h2>
+  <h2 id="authentication-posture">The Authentication Posture Problem</h2>
   <p>Post-incident authentication review surfaced a gap on the victim's own domain too.</p>
   <p>DMARC wasn't at <code>p=reject</code>. No aggregate reporting either, so no visibility into who was spoofing the domain. Moving to full rejection with reporting fixed both problems.</p>
   <p>Won't stop a lookalike attack. But it closes the spoofing vector and gives you visibility into who's trying.</p>
   <p>SPF had multiple authorized senders: cloud mail, marketing tools, CRM. Normal for any enterprise. But you need to validate DKIM alignment on each one before pushing to reject. Move too fast and you break legitimate mail.</p>
-
   <hr>
-
-  <h2>Lessons Learned</h2>
-
+  <h2 id="lessons-learned">Lessons Learned</h2>
   <h3>For Security Teams</h3>
   <p>Lookalike monitoring needs to go both ways: inbound domains impersonating your vendors, and outbound domains impersonating you. This attack ran both simultaneously. Run <code>dnstwist</code> quarterly. Any domain within 1-2 characters of yours with active MX records is worth watching. And get DMARC aggregate reporting (<code>rua=</code>) turned on. Without it you have no visibility into who's trying.</p>
-
   <h3>For Detection Engineers</h3>
   <p>Gateway rules without business context are noise. The signal is in correlation: domain similarity + domain age + new thread participant + financial keywords. Build those rules. They don't exist out of the box. And treat <code>Message-ID</code> and <code>In-Reply-To</code> headers as your primary forensic tool in any BEC investigation. They tell you exactly when the attacker entered and what they had access to.</p>
-
   <h3>For Incident Responders</h3>
   <p>Start with the headers, not the endpoint. There's no compromise to find. The attack surface is the email thread itself. Trace every participant, verify every domain, reconstruct the timeline through Message-ID correlation. Out-of-band verification for banking changes needs to be a mandatory process step, not left to individual judgment.</p>
-
   <h3>For Leaders</h3>
   <p>Financial processes are designed for efficiency, not adversarial conditions. If your payment change workflow has no verification step, threat-modeling your infrastructure doesn't help. Security can flag anomalies. The process has to require verification before money moves.</p>
-
   <hr>
-
-  <h2>What Would Have Actually Stopped This</h2>
+  <h2 id="what-would-have-stopped-this">What Would Have Actually Stopped This</h2>
   <p>Every technical control worked. The attack still succeeded. The fix isn't in better tooling. It's in the controls that were never built in the first place.</p>
   <p>Five things that would have stopped this:</p>
-
   <p><strong>1. A vendor contact inventory</strong><br>
   A maintained list of confirmed email domains for every active vendor. Check every inbound financial email against it. <code>zelvpay.com</code> not in the registry? It doesn't reach finance.</p>
-
   <p><strong>2. Lookalike domain monitoring</strong><br>
   Automated scanning for newly registered domains close to your known vendors. Both attacker domains were registered weeks before the attack. That window exists for every one of these cases. Almost no one uses it.</p>
-
   <p><strong>3. Out-of-band verification for payment changes</strong><br>
   Any banking detail change requires a phone call to a pre-registered number. Doesn't matter how trusted the thread looks. Doesn't matter how familiar the sender seems. Not email. Not a number in the same message. A number you already have on file.</p>
-
   <p><strong>4. Thread-aware detection</strong><br>
   A SIEM rule flagging new external participants in existing financial threads, combined with domain age and first-time sender signals. The attacker's entry point was sitting in the headers the whole time. Nothing was watching for it.</p>
-
   <p><strong>5. Vendor email posture in third-party risk</strong><br>
   The real vendor had no DMARC. That gap was part of what made this work. Vendor email authentication should be in your third-party risk assessment, not just contracts and compliance certifications.</p>
-
   <p>None of this requires buying new tools. All of it requires deliberate process design.</p>
-
   <hr>
-
-  <h2>The Uncomfortable Truth</h2>
+  <h2 id="uncomfortable-truth">The Uncomfortable Truth</h2>
   <p>Every technical gate passed. Authentication worked. Gateway worked. SIEM worked. Nothing failed in the way security tools are designed to detect failure.</p>
   <p>The failure was architectural. No security control was asking: <em>should this entity be trusted by this business, for this specific request, right now?</em></p>
   <p>Email authentication answers one question: is this message legitimately from the domain it claims? It doesn't answer whether that domain should be trusted for financial instructions. That's a business context question. It requires vendor registries, verified contact lists, mandatory verification workflows, and thread-aware detection. Until organizations start threat-modeling their financial workflows the same way they threat-model their infrastructure, BEC will keep working.</p>
   <p>The fix isn't better email security tooling. It's building verification into the workflow itself.</p>
-
   <div class="callout">
     <p><strong>The fix isn't better email security tooling. It's building verification into the workflow itself.</strong></p>
   </div>
+</section>
+</article>
+</main>
 
-  <div class="disclaimer">
-    This analysis reflects generalized patterns from documented BEC attack methodology. Technical artifacts illustrate actual attack techniques. All entities are fictional. The lessons are real.
-  </div>
+<footer>
+  <span>ad-cloud-sec.github.io</span>
+  <a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank" rel="noopener noreferrer">LinkedIn →</a>
+</footer>
 
-</div>
 </body>
 </html>

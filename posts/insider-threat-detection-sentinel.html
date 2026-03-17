@@ -1565,7 +1565,7 @@ Reopen closed:      Enabled</pre>
       var content = this.nextElementSibling;
       var isOpen = content.classList.contains('open');
       content.classList.toggle('open');
-      t      this.setAttribute('aria-expanded', String(!isOpen));
+      this.setAttribute('aria-expanded', String(!isOpen));
       this.querySelector('.toggle-label').textContent = isOpen ? 'Show query' : 'Hide query';
     });
   });

@@ -13,7 +13,9 @@ import hashlib
 import logging
 import difflib
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 import feedparser
@@ -133,6 +135,64 @@ def _extract_iocs(text: str) -> dict:
     if hashes:
         iocs["sha256"] = hashes
     return iocs
+
+
+# Sources worth fetching full article text from (known to truncate in RSS)
+_FULL_TEXT_SOURCES = {
+    "Mandiant Blog", "Palo Alto Unit42", "Talos Intelligence", "CrowdStrike Blog",
+    "Sentinel One Blog", "Securelist", "Check Point Research", "The DFIR Report",
+    "Zero Day Initiative", "NCC Group Research", "Rapid7 Blog", "Tenable Research",
+    "Elastic Security Labs", "Red Canary", "Google Project Zero", "CISA Advisories",
+    "MSRC", "Cisco Security", "VMware Security", "Red Hat Security",
+    "IBM Security Intel", "Huntress Blog",
+}
+
+ARTICLE_TIMEOUT   = 8    # seconds per article fetch
+MAX_ARTICLE_FETCH = 20   # cap total articles fetched per run
+
+
+class _HTMLTextExtractor(HTMLParser):
+    """Minimal HTML → plain-text extractor using stdlib only."""
+    _SKIP_TAGS = {"script", "style", "nav", "header", "footer",
+                  "aside", "noscript", "form", "button", "meta"}
+
+    def __init__(self):
+        super().__init__()
+        self._skip  = 0
+        self._parts = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self._SKIP_TAGS:
+            self._skip += 1
+
+    def handle_endtag(self, tag):
+        if tag in self._SKIP_TAGS and self._skip:
+            self._skip -= 1
+
+    def handle_data(self, data):
+        if not self._skip:
+            t = data.strip()
+            if t:
+                self._parts.append(t)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _fetch_article_text(url: str) -> str:
+    """Fetch a URL and return extracted plain text (up to 6000 chars). Returns '' on any failure."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=ARTICLE_TIMEOUT, allow_redirects=True)
+        resp.raise_for_status()
+        ct = resp.headers.get("Content-Type", "")
+        if "html" not in ct and "text" not in ct:
+            return ""
+        parser = _HTMLTextExtractor()
+        parser.feed(resp.text)
+        text = re.sub(r"\s{2,}", " ", parser.get_text()).strip()
+        return text[:6000]
+    except Exception:
+        return ""
 
 
 def _parse_cpe_products(configurations: list) -> list:
@@ -257,9 +317,31 @@ def fetch_all_data() -> tuple:
             if any(c in kev_cve_ids for c in [m.upper() for m in CVE_RE.findall(text)]):
                 item["has_exploit"] = True
 
-    # ── IOC extraction ─────────────────────────────────────────────────────────
+    # ── Full article text fetch (high-value sources only) ─────────────────────
+    candidates = [
+        i for i in items
+        if i.get("source") in _FULL_TEXT_SOURCES and len(i.get("description", "")) < 400
+    ][:MAX_ARTICLE_FETCH]
+
+    if candidates:
+        logger.info("  Fetching full text for %d articles …", len(candidates))
+        fetched = 0
+        def _enrich(item):
+            text = _fetch_article_text(item["url"])
+            return item, text
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            futures = {pool.submit(_enrich, i): i for i in candidates}
+            for fut in as_completed(futures):
+                item, full_text = fut.result()
+                if full_text and len(full_text) > len(item.get("description", "")):
+                    item["full_text"] = full_text
+                    fetched += 1
+        logger.info("  ✓ Full text fetched: %d articles", fetched)
+
+    # ── IOC extraction (uses full text when available) ─────────────────────────
     for item in items:
-        text = item.get("title", "") + " " + item.get("description", "")
+        text = item.get("full_text") or item.get("title", "") + " " + item.get("description", "")
         iocs = _extract_iocs(text)
         if iocs:
             item["iocs"] = iocs

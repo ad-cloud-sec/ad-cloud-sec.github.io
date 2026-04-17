@@ -92,7 +92,7 @@ RSS_FEEDS = [
     {"name": "CISA Advisories",         "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml"},
     {"name": "CISA ICS Advisories",    "url": "https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml"},
     {"name": "NCSC UK",                "url": "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml"},
-    {"name": "CERT-EU",                "url": "https://cert.europa.eu/publications/security-advisories/feed"},
+    {"name": "CERT-FR (ANSSI)",         "url": "https://www.cert.ssi.gouv.fr/alerte/feed/"},
     {"name": "ASD ACSC Alerts",        "url": "https://www.cyber.gov.au/about-us/view-all-content/alerts-and-advisories/rss"},
     # ── Vendor security advisories ────────────────────────────────────────────
     {"name": "MSRC",                    "url": "https://msrc.microsoft.com/blog/feed/"},
@@ -101,8 +101,7 @@ RSS_FEEDS = [
     {"name": "Red Hat Security",        "url": "https://www.redhat.com/en/rss/blog/channel/security"},
     # ── Security product launches & industry news ──────────────────────────────
     {"name": "Help Net Security",       "url": "https://www.helpnetsecurity.com/feed/"},
-    {"name": "SC Media",                "url": "https://www.scmagazine.com/feed/"},
-    {"name": "VentureBeat Security",    "url": "https://venturebeat.com/security/feed/"},
+    {"name": "VentureBeat Security",    "url": "https://venturebeat.com/category/security/feed/"},
     {"name": "TechCrunch Security",     "url": "https://techcrunch.com/category/security/feed/"},
     {"name": "Security Boulevard",      "url": "https://securityboulevard.com/feed/"},
     {"name": "The Register Security",   "url": "https://www.theregister.com/security/headlines.atom"},
@@ -117,6 +116,30 @@ EPSS_API      = "https://api.first.org/data/v1/epss"
 HN_API        = "https://hn.algolia.com/api/v1/search"
 
 CVE_RE        = re.compile(r'CVE-\d{4}-\d+', re.IGNORECASE)
+
+
+def _http_get(url: str, *, timeout: int = TIMEOUT, params=None, headers: dict | None = None) -> "requests.Response":
+    """GET with 3-attempt exponential back-off on transient errors (429, 5xx, timeout)."""
+    h = headers if headers is not None else HEADERS
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        try:
+            resp = requests.get(url, headers=h, params=params, timeout=timeout, allow_redirects=True)
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", min(4 * (attempt + 1), 30)))
+                time.sleep(wait)
+                continue
+            if resp.status_code in (502, 503, 504) and attempt < 2:
+                time.sleep(2 ** attempt)
+                continue
+            return resp
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+            last_exc = exc
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    if last_exc:
+        raise last_exc
+    raise requests.exceptions.RequestException(f"Failed after 3 attempts: {url}")
 _IOC_IPv4     = re.compile(r'\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b')
 _IOC_SHA256   = re.compile(r'\b[0-9a-fA-F]{64}\b')
 _PRIVATE_IP   = re.compile(r'^(?:10\.|172\.(?:1[6-9]|2\d|3[01])\.|192\.168\.|127\.)')
@@ -182,7 +205,7 @@ class _HTMLTextExtractor(HTMLParser):
 def _fetch_article_text(url: str) -> str:
     """Fetch a URL and return extracted plain text (up to 6000 chars). Returns '' on any failure."""
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=ARTICLE_TIMEOUT, allow_redirects=True)
+        resp = _http_get(url, timeout=ARTICLE_TIMEOUT)
         resp.raise_for_status()
         ct = resp.headers.get("Content-Type", "")
         if "html" not in ct and "text" not in ct:
@@ -236,15 +259,27 @@ def fetch_all_data() -> tuple:
     cutoff = datetime.now(timezone.utc) - timedelta(days=LOOKBACK_DAYS)
     items: list = []
 
-    # ── RSS feeds ──────────────────────────────────────────────────────────────
+    # ── RSS feeds (parallel — each feed is a different domain) ───────────────────
+    rss_results: dict = {}
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        future_to_name = {
+            pool.submit(_fetch_rss, f["name"], f["url"], cutoff): f["name"]
+            for f in RSS_FEEDS
+        }
+        for fut in as_completed(future_to_name):
+            name = future_to_name[fut]
+            try:
+                rss_results[name] = (fut.result(), None)
+            except Exception as exc:
+                rss_results[name] = ([], exc)
+
     for feed in RSS_FEEDS:
-        try:
-            batch = _fetch_rss(feed["name"], feed["url"], cutoff)
+        batch, err = rss_results.get(feed["name"], ([], None))
+        if err:
+            logger.warning("  ✗ %-26s FAILED: %s", feed["name"], err)
+        else:
             items.extend(batch)
             logger.info("  ✓ %-26s %d items", feed["name"], len(batch))
-        except Exception as exc:
-            logger.warning("  ✗ %-26s FAILED: %s", feed["name"], exc)
-        time.sleep(0.4)   # polite inter-request delay
 
     # ── NVD CVE API ────────────────────────────────────────────────────────────
     try:
@@ -439,7 +474,7 @@ def _normalise(
 # ── RSS/Atom ───────────────────────────────────────────────────────────────────
 
 def _fetch_rss(source_name: str, url: str, cutoff: datetime) -> list:
-    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+    resp = _http_get(url)
     resp.raise_for_status()
     feed = feedparser.parse(resp.content)
 
@@ -490,7 +525,7 @@ def _fetch_nvd(cutoff: datetime) -> list:
     if api_key:
         h["apiKey"] = api_key
 
-    resp = requests.get(NVD_API_URL, params=params, headers=h, timeout=TIMEOUT)
+    resp = _http_get(NVD_API_URL, params=params, headers=h)
     resp.raise_for_status()
     data = resp.json()
 
@@ -551,7 +586,7 @@ def _fetch_nvd(cutoff: datetime) -> list:
 # ── CISA KEV ──────────────────────────────────────────────────────────────────
 
 def _fetch_cisa_kev(cutoff: datetime) -> list:
-    resp = requests.get(CISA_KEV_URL, headers=HEADERS, timeout=TIMEOUT)
+    resp = _http_get(CISA_KEV_URL)
     resp.raise_for_status()
     data = resp.json()
 
@@ -632,11 +667,10 @@ def _fetch_github_security() -> list:
 
     for q in queries:
         try:
-            resp = requests.get(
+            resp = _http_get(
                 GITHUB_API,
                 headers=h,
                 params={"q": q, "sort": "stars", "order": "desc", "per_page": 10},
-                timeout=TIMEOUT,
             )
             if resp.status_code == 422:
                 logger.debug("GitHub query '%s' returned 422 (no results), skipping.", q)
@@ -677,12 +711,7 @@ def _fetch_epss(cve_ids: list) -> dict:
     try:
         for i in range(0, len(cve_ids), 100):
             batch = cve_ids[i:i+100]
-            resp = requests.get(
-                EPSS_API,
-                params={"cve": ",".join(batch)},
-                headers=HEADERS,
-                timeout=TIMEOUT,
-            )
+            resp = _http_get(EPSS_API, params={"cve": ",".join(batch)})
             resp.raise_for_status()
             for entry in resp.json().get("data", []):
                 cve = entry.get("cve", "").upper()
@@ -706,13 +735,10 @@ def _fetch_hn_security(cutoff: datetime) -> list:
 
     for q in queries:
         try:
-            resp = requests.get(
-                HN_API,
-                params={"tags": "story", "query": q, "hitsPerPage": 15,
-                        "numericFilters": f"created_at_i>{cutoff_ts}"},
-                headers=HEADERS,
-                timeout=TIMEOUT,
-            )
+            resp = _http_get(HN_API, params={
+                "tags": "story", "query": q, "hitsPerPage": 15,
+                "numericFilters": f"created_at_i>{cutoff_ts}",
+            })
             resp.raise_for_status()
             for hit in resp.json().get("hits", []):
                 oid   = hit.get("objectID", "")

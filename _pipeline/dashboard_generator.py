@@ -25,18 +25,30 @@ def _load_font_b64(filename: str) -> str:
     return base64.b64encode(p.read_bytes()).decode()
 
 def _build_font_face() -> str:
-    """Build @font-face block for JetBrains Mono if available."""
-    b64 = _load_font_b64("JetBrainsMono-VariableFont_wght.ttf")
-    if not b64:
-        return ""
-    return f"""@font-face {{
-  font-family: 'JetBrains Mono';
-  src: url('data:font/truetype;base64,{b64}') format('truetype');
+    """Build @font-face blocks for Inter (body) and JetBrains Mono (code) if available."""
+    parts = []
+
+    inter_b64 = _load_font_b64("Inter-VariableFont_opsz,wght.ttf")
+    if inter_b64:
+        parts.append(f"""@font-face {{
+  font-family: 'Inter';
+  src: url('data:font/truetype;base64,{inter_b64}') format('truetype');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
-}}
-"""
+}}""")
+
+    mono_b64 = _load_font_b64("JetBrainsMono-VariableFont_wght.ttf")
+    if mono_b64:
+        parts.append(f"""@font-face {{
+  font-family: 'JetBrains Mono';
+  src: url('data:font/truetype;base64,{mono_b64}') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}}""")
+
+    return "\n".join(parts) + ("\n" if parts else "")
 
 def _minify_css(css: str) -> str:
     """Basic CSS minifier — strips comments and collapses whitespace."""
@@ -228,6 +240,10 @@ def _build_html(data: dict) -> str:
     <span class="tb-stat tb-high">{high_n} High</span>
     <span class="tb-stat tb-total">{total_shown} Stories {delta_html}</span>
   </div>
+  <button class="tb-print-btn" onclick="window.print()" title="Print / Export PDF" aria-label="Print dashboard">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    PDF
+  </button>
 </div>
 
 <!-- ══ Header ════════════════════════════════════════════════════════════════ -->
@@ -278,6 +294,16 @@ def _build_html(data: dict) -> str:
 
   <!-- Main -->
   <main class="main-content">
+
+    <!-- ── Severity filter toolbar ──────────────────────────────────────────── -->
+    <div class="filter-toolbar" role="toolbar" aria-label="Filter by severity">
+      <span class="ft-label">Filter:</span>
+      <button class="ft-btn ft-all active" data-sev="all">All</button>
+      <button class="ft-btn ft-critical"   data-sev="critical">Critical</button>
+      <button class="ft-btn ft-high"       data-sev="high">High</button>
+      <button class="ft-btn ft-info"       data-sev="info">Info</button>
+      <span class="ft-count" id="ft-count"></span>
+    </div>
 
 {top_stories_html}
 
@@ -684,7 +710,7 @@ _CSS = """
   --shadow-md: 0 8px 28px rgba(0,0,0,0.5),  0 2px 8px rgba(0,0,0,0.35);
   --shadow-lg: 0 24px 64px rgba(0,0,0,0.65),0 8px 24px rgba(0,0,0,0.45);
 
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 
   --r-sm: 4px;
@@ -1311,6 +1337,78 @@ section { scroll-margin-top: calc(var(--topbar-h) + var(--header-h) + 12px); }
   .topbar-updated { display: none; }
   .search-hint { display: none; }
 }
+
+/* ── Print / PDF export ──────────────────────────────────────────────────── */
+.tb-print-btn {
+  display: flex; align-items: center; gap: 5px; margin-left: 6px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-2); font-size: 10px; font-weight: 700; font-family: var(--mono);
+  letter-spacing: .06em; padding: 3px 10px; border-radius: var(--r-sm); cursor: pointer;
+  transition: all .2s;
+}
+.tb-print-btn svg { width: 12px; height: 12px; }
+.tb-print-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-1); border-color: rgba(255,255,255,0.18); }
+
+@media print {
+  .topbar, .site-header, .sidebar, .filter-toolbar,
+  .collapse-btn, .bg-orbs, .bg-grid, .site-footer,
+  .tb-print-btn, .header-search, .header-nav { display: none !important; }
+
+  body { background: #fff; color: #111; font-size: 11pt; }
+  .page-layout { display: block; }
+  .main-content { padding: 0; }
+  .cat-section, .digest-section, .top-stories-section {
+    background: #fff; border: 1px solid #ddd; border-top: 2px solid var(--cat, #333);
+    box-shadow: none; margin-bottom: 16pt; break-inside: avoid;
+  }
+  .item-card { background: #fafafa; border: 1px solid #e0e0e0; border-left: 3px solid #999;
+               box-shadow: none; break-inside: avoid; }
+  .item-card.sev-critical { border-left-color: #e53e3e; background: #fff5f5; }
+  .item-card.sev-high     { border-left-color: #dd6b20; background: #fffaf0; }
+  .card-title a, .hc-title a, .dc-title a { color: #1a202c; }
+  .card-source { color: #2d6a4f; background: #f0faf5; border-color: #b7dfc8; }
+  .read-link { color: #2d6a4f; background: #f0faf5; border-color: #b7dfc8; }
+  .sev-pill-critical { color: #c53030; background: #fff5f5; border-color: #feb2b2; }
+  .sev-pill-high { color: #c05621; background: #fffaf0; border-color: #fbd38d; }
+  .cve-id { color: #2d6a4f; background: #f0faf5; border-color: #b7dfc8; }
+  .ttp-badge { color: #2d6a4f; background: #f0faf5; border-color: #b7dfc8; }
+  .kev-badge { color: #c53030; background: #fff5f5; border-color: #feb2b2; }
+  .cvss-badge { color: #744210; background: #fffbeb; border-color: #fbd38d; }
+  .items-grid { grid-template-columns: repeat(2, 1fr); gap: 10pt; }
+  .show-more-btn { display: none !important; }
+  .card-hidden-more { display: flex !important; }
+}
+
+/* ── Severity filter toolbar ─────────────────────────────────────────────── */
+.filter-toolbar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  background: rgba(255,255,255,0.018); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-lg); padding: 10px 16px;
+}
+.ft-label { font-size: 11px; font-weight: 600; color: var(--text-3); font-family: var(--mono); margin-right: 2px; }
+.ft-btn {
+  font-size: 11px; font-weight: 700; font-family: var(--mono); letter-spacing: .05em;
+  padding: 4px 14px; border-radius: var(--r-sm); border: 1px solid transparent;
+  cursor: pointer; background: rgba(255,255,255,0.05); color: var(--text-2);
+  transition: all .2s;
+}
+.ft-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-1); }
+.ft-all.active    { background: rgba(255,255,255,0.1); color: var(--text-1); border-color: rgba(255,255,255,0.15); }
+.ft-critical.active { background: rgba(244,63,94,.16); color: #fca5a5; border-color: rgba(244,63,94,.35); }
+.ft-high.active     { background: rgba(249,115,22,.16); color: #fdba74; border-color: rgba(249,115,22,.35); }
+.ft-info.active     { background: rgba(255,255,255,.08); color: var(--text-1); border-color: rgba(255,255,255,.18); }
+.ft-count { margin-left: auto; font-size: 11px; color: var(--text-3); font-family: var(--mono); }
+
+/* ── Show more ───────────────────────────────────────────────────────────── */
+.card-hidden-more { display: none; }
+.show-more-btn {
+  grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: var(--r-lg); padding: 10px; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--text-3);
+  transition: all .2s; width: 100%;
+}
+.show-more-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-1); border-color: rgba(255,255,255,0.18); }
 """
 
 # ══ JS ═════════════════════════════════════════════════════════════════════════
@@ -1377,7 +1475,6 @@ const io = new IntersectionObserver(entries => {
 document.querySelectorAll('section[id]').forEach(s => io.observe(s));
 
 // ── Hero grid search ─────────────────────────────────────────────────────────
-const origSearch = doSearch;
 searchInput.addEventListener('input', () => {
   document.querySelectorAll('.hero-grid').forEach(grid => {
     const q = searchInput.value.trim().toLowerCase();
@@ -1386,6 +1483,60 @@ searchInput.addEventListener('input', () => {
     if (q && visible.length === 0) {
       if (!msg) { msg = document.createElement('p'); msg.className = 'no-items search-no-results'; msg.textContent = 'No items match.'; grid.appendChild(msg); }
     } else if (msg) { msg.remove(); }
+  });
+});
+
+// ── Show more pagination ──────────────────────────────────────────────────────
+const SHOW_LIMIT = 8;
+document.querySelectorAll('.items-grid').forEach(grid => {
+  const cards = [...grid.querySelectorAll('.item-card')];
+  if (cards.length <= SHOW_LIMIT) return;
+  cards.slice(SHOW_LIMIT).forEach(c => c.classList.add('card-hidden-more'));
+  const btn = document.createElement('button');
+  btn.className = 'show-more-btn';
+  btn.textContent = `Show ${cards.length - SHOW_LIMIT} more`;
+  btn.addEventListener('click', () => {
+    grid.querySelectorAll('.card-hidden-more').forEach(c => {
+      c.classList.remove('card-hidden-more');
+      c.style.display = '';
+    });
+    btn.remove();
+  });
+  grid.appendChild(btn);
+});
+
+// ── Severity filter ───────────────────────────────────────────────────────────
+const ftBtns   = document.querySelectorAll('.ft-btn');
+const ftCount  = document.getElementById('ft-count');
+
+function applyFilter(sev) {
+  let shown = 0, total = 0;
+  document.querySelectorAll('.item-card').forEach(card => {
+    total++;
+    let visible = true;
+    if (sev === 'critical') visible = card.classList.contains('sev-critical');
+    else if (sev === 'high') visible = card.classList.contains('sev-high');
+    else if (sev === 'info') visible = card.classList.contains('sev-info') || (!card.classList.contains('sev-critical') && !card.classList.contains('sev-high'));
+    card.style.display = visible ? '' : 'none';
+    if (visible) shown++;
+  });
+  // show/hide empty section messages
+  document.querySelectorAll('.items-grid').forEach(grid => {
+    const visible = [...grid.querySelectorAll('.item-card')].filter(c => c.style.display !== 'none').length;
+    let msg = grid.querySelector('.filter-empty-msg');
+    if (visible === 0 && sev !== 'all') {
+      if (!msg) { msg = document.createElement('p'); msg.className = 'no-items filter-empty-msg'; grid.appendChild(msg); }
+      msg.textContent = `No ${sev} severity items in this section.`;
+    } else if (msg) { msg.remove(); }
+  });
+  if (ftCount) ftCount.textContent = sev === 'all' ? '' : `${shown} shown`;
+}
+
+ftBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    ftBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter(btn.dataset.sev);
   });
 });
 """

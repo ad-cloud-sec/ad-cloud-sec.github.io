@@ -105,7 +105,7 @@ def main(open_browser: bool = True) -> None:
     logger.info("[+] Sending dashboard via Gmail …")
     try:
         from gmail_sender import send_dashboard_email
-        send_dashboard_email(latest_path)
+        send_dashboard_email(latest_path, data)
     except Exception as exc:
         logger.warning("Gmail delivery failed: %s — dashboard was still saved.", exc)
 

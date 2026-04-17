@@ -51,6 +51,7 @@ jobs:
           GMAIL_ADDRESS:      ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GMAIL_RECIPIENT:    ${{ secrets.GMAIL_RECIPIENT }}
+          DASHBOARD_URL:      https://ad-cloud-sec.github.io/
         run: python _pipeline/main.py --no-browser
 
       - name: Publish dashboard

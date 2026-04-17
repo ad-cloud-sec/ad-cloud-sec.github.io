@@ -71,8 +71,26 @@
   footer span { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); letter-spacing: 0.06em; }
   footer a { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); text-decoration: none; letter-spacing: 0.06em; }
   footer a:hover { color: var(--accent); }
+
+  /* Intel feed section */
+  .intel { max-width: 1000px; margin: 0 auto; padding: 48px 40px; border-bottom: 1px solid var(--rule); }
+  .intel-inner { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center; }
+  .intel-live { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(56,178,172,.4);} 50%{opacity:.7;box-shadow:0 0 0 5px rgba(56,178,172,0);} }
+  .live-label { font-family: 'Fira Code', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .intel-kicker { font-family: 'Fira Code', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 10px; }
+  .intel h2 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1.25; margin-bottom: 12px; }
+  .intel-desc { font-size: 15px; color: var(--ink-light); font-weight: 300; line-height: 1.65; max-width: 560px; margin-bottom: 18px; }
+  .intel-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .intel-chip { font-family: 'Fira Code', monospace; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); background: #1a1d27; border: 1px solid var(--rule); padding: 3px 10px; }
+  .intel-cta { display: inline-flex; align-items: center; gap: 6px; font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(56,178,172,.35); padding: 10px 22px; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
+  .intel-cta:hover { background: rgba(56,178,172,.07); border-color: var(--accent); }
+
   @media (max-width: 700px) {
-    nav, .hero, .writing, footer { padding-left: 20px; padding-right: 20px; }
+    nav, .hero, .writing, .intel, footer { padding-left: 20px; padding-right: 20px; }
+    .intel-inner { grid-template-columns: 1fr; gap: 20px; }
+    .intel-cta { align-self: flex-start; }
     .about { padding: 40px 20px; }
     .about-inner { grid-template-columns: 1fr; gap: 40px; }
     .post-item { grid-template-columns: 1fr; gap: 8px; }
@@ -89,6 +107,7 @@
   <ul class="nav-links">
     <li><a href="/">Writing</a></li>
     <li><a href="#about">About</a></li>
+    <li><a href="/dashboard.html" style="color:var(--accent);">Intel</a></li>
     <li><a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
   </ul>
 </nav>
@@ -109,6 +128,29 @@
     <span class="tag">Zero Trust</span>
     <span class="tag">Email Security</span>
     <span class="tag">AWS · Azure · GCP</span>
+  </div>
+</section>
+
+<section class="intel">
+  <div class="intel-inner">
+    <div>
+      <div class="intel-live">
+        <span class="live-dot"></span>
+        <span class="live-label">Updated Daily</span>
+      </div>
+      <div class="intel-kicker">Intelligence Feed</div>
+      <h2>Cybersecurity Intelligence Dashboard</h2>
+      <p class="intel-desc">CVEs, threat intel, cloud security, AI/LLM threats and trending security tools — aggregated from 30+ sources including NVD, CISA KEV, and GitHub, curated by AI.</p>
+      <div class="intel-meta">
+        <span class="intel-chip">NVD CVE API</span>
+        <span class="intel-chip">CISA KEV</span>
+        <span class="intel-chip">30+ RSS Feeds</span>
+        <span class="intel-chip">GitHub Trending</span>
+        <span class="intel-chip">EPSS Scores</span>
+        <span class="intel-chip">MITRE ATT&amp;CK</span>
+      </div>
+    </div>
+    <a href="/dashboard.html" class="intel-cta">View Dashboard →</a>
   </div>
 </section>
 

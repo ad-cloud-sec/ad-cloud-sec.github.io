@@ -21,6 +21,12 @@ Security research, detection engineering, and incident analysis from a practitio
 - Kubernetes Security
 - AWS · Azure · GCP
 
+## Intel Dashboard
+
+Daily cybersecurity intelligence — CVEs, threat intel, cloud security, AI/LLM threats, curated and updated every morning at 09:00 IST.
+
+[ad-cloud-sec.github.io/dashboard.html](https://ad-cloud-sec.github.io/dashboard.html)
+
 ## Site
 
 [ad-cloud-sec.github.io](https://ad-cloud-sec.github.io)

@@ -36,6 +36,13 @@ jobs:
           key: summary-cache-${{ github.run_id }}
           restore-keys: summary-cache-
 
+      - name: Restore items store
+        uses: actions/cache@v5.0.5
+        with:
+          path: _pipeline/items_store.json
+          key: items-store-${{ github.run_id }}
+          restore-keys: items-store-
+
       - name: Generate dashboard
         env:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}

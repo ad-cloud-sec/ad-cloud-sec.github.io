@@ -23,6 +23,10 @@ logger = logging.getLogger("dashboard.ai")
 CACHE_FILE  = Path(__file__).parent / "summary_cache.json"
 CACHE_TTL_D = 14   # evict entries older than this many days
 
+# ── Rolling items store (7-day window) ─────────────────────────────────────────
+STORE_FILE  = Path(__file__).parent / "items_store.json"
+STORE_TTL_D = 7
+
 # ── Category definitions ───────────────────────────────────────────────────────
 CATEGORIES = {
     "cve_vuln":            "Breaking CVEs & Vulnerabilities",
@@ -88,6 +92,61 @@ BATCH_SIZE = 12   # items per Claude API call
 API_DELAY  = 0.5  # seconds between API calls
 
 
+# ══ Items store helpers ════════════════════════════════════════════════════════
+
+def _load_store() -> dict:
+    """Load persisted items from previous runs, keyed by URL, evicting >7 days."""
+    if not STORE_FILE.exists():
+        return {}
+    try:
+        data = json.loads(STORE_FILE.read_text(encoding="utf-8"))
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=STORE_TTL_D)).isoformat()
+        evicted = [url for url, v in data.items() if v.get("stored_at", "") < cutoff]
+        for url in evicted:
+            del data[url]
+        return data
+    except Exception as exc:
+        logger.warning("  Items store load failed (%s) — starting fresh", exc)
+        return {}
+
+
+def _save_store(store: dict) -> None:
+    try:
+        STORE_FILE.write_text(json.dumps(store, default=str, indent=2), encoding="utf-8")
+    except Exception as exc:
+        logger.warning("  Items store save failed: %s", exc)
+
+
+def _merge_into_store(store: dict, raw_items: list) -> list:
+    """Add new items to store and return full 7-day item list."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for item in raw_items:
+        url = item.get("url")
+        if not url or url in store:
+            continue
+        entry = {k: v for k, v in item.items() if k != "published_dt"}
+        pub = item.get("published_dt")
+        entry["published_dt_iso"] = pub.isoformat() if pub else None
+        entry["stored_at"] = now_iso
+        store[url] = entry
+    _save_store(store)
+
+    # Reconstruct item list from store for 7-day window
+    result = []
+    for url, entry in store.items():
+        item = {k: v for k, v in entry.items() if k not in ("stored_at", "published_dt_iso")}
+        item["url"] = url
+        iso = entry.get("published_dt_iso")
+        if iso:
+            try:
+                dt = datetime.fromisoformat(iso)
+                item["published_dt"] = dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            except ValueError:
+                item["published_dt"] = None
+        result.append(item)
+    return result
+
+
 # ══ Cache helpers ══════════════════════════════════════════════════════════════
 
 def _load_cache() -> dict:
@@ -141,11 +200,15 @@ def process_all_items(
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
     items_24h    = [i for i in raw_items if _aware(i.get("published_dt")) and _aware(i["published_dt"]) >= cutoff_24h]
-    items_7d     = [i for i in raw_items if _aware(i.get("published_dt")) and _aware(i["published_dt"]) >= cutoff_7d]
     items_no_date = [i for i in raw_items if not i.get("published_dt")]
     items_24h    = items_24h + items_no_date
 
-    logger.info("  24h items: %d | 7-day items: %d | no-date items: %d",
+    # Build 7-day items from the rolling store (persisted across daily runs)
+    store    = _load_store()
+    all_7d   = _merge_into_store(store, raw_items)
+    items_7d = [i for i in all_7d if _aware(i.get("published_dt")) and _aware(i["published_dt"]) >= cutoff_7d]
+
+    logger.info("  24h items: %d | 7-day items: %d (from store) | no-date items: %d",
                 len(items_24h), len(items_7d), len(items_no_date))
 
     # Load cache — used regardless of whether we have an API key

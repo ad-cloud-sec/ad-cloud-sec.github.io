@@ -551,6 +551,30 @@ Repos:
 
 # ══ Keyword fallback ═══════════════════════════════════════════════════════════
 
+_TTP_MAP = {
+    "T1190": ["remote code execution", "rce", "exploit public-facing", "web shell", "sql injection", "path traversal", "deserialization"],
+    "T1059": ["powershell", "command execution", "bash script", "wscript", "cscript", "command-line"],
+    "T1078": ["valid accounts", "credential theft", "stolen credentials", "password spray", "authentication bypass"],
+    "T1021": ["lateral movement", " rdp ", "smb exploit", "wmi remote", "psexec"],
+    "T1486": ["ransomware", "file encrypt", "ransom demand", "lockbit", "blackcat", "cl0p", "akira"],
+    "T1566": ["phishing", "spearphishing", "malicious attachment", "malicious email", "lure"],
+    "T1055": ["process injection", "dll injection", "reflective dll", "shellcode"],
+    "T1003": ["credential dump", "lsass", "mimikatz", "secretsdump", "ntds"],
+    "T1110": ["brute force", "password spraying", "credential stuffing"],
+    "T1562": ["defense evasion", "edr bypass", "av bypass", "amsi bypass", "disable security"],
+    "T1195": ["supply chain", "dependency confusion", "malicious package", "typosquatting"],
+    "T1048": ["data exfiltration", "exfil", "data theft", "data leak", "stolen data"],
+    "T1071": ["c2 communication", "command and control", "c&c", "cobalt strike", "beacon"],
+    "T1133": ["vpn exploit", "citrix exploit", "pulse secure", "fortinet exploit", "external remote"],
+}
+
+
+def _map_ttps(text: str) -> list:
+    """Return list of MITRE ATT&CK TTP IDs matched by keywords in text."""
+    lower = text.lower()
+    return [tid for tid, kws in _TTP_MAP.items() if any(kw in lower for kw in kws)]
+
+
 def _kw_guess_category(item: dict) -> str:
     if item.get("category_hint"):
         return item["category_hint"]
@@ -576,12 +600,15 @@ def _kw_categorise(items: list) -> dict:
             sev = "High"
         elif (item.get("epss") or 0) >= 0.5 and sev == "Interesting":
             sev = "High"
+        text = item.get("title", "") + " " + item.get("description", "")
+        ttps = _map_ttps(text)
         categorised[cat].append({
             **item,
             "summary":  item.get("description") or item["title"],
             "severity": sev,
             "category": cat,
             "include":  True,
+            "ttps":     ttps,
         })
     return categorised
 

@@ -114,7 +114,56 @@ GITHUB_API    = "https://api.github.com/search/repositories"
 EPSS_API      = "https://api.first.org/data/v1/epss"
 HN_API        = "https://hn.algolia.com/api/v1/search"
 
-CVE_RE = re.compile(r'CVE-\d{4}-\d+', re.IGNORECASE)
+CVE_RE        = re.compile(r'CVE-\d{4}-\d+', re.IGNORECASE)
+_IOC_IPv4     = re.compile(r'\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b')
+_IOC_SHA256   = re.compile(r'\b[0-9a-fA-F]{64}\b')
+_PRIVATE_IP   = re.compile(r'^(?:10\.|172\.(?:1[6-9]|2\d|3[01])\.|192\.168\.|127\.)')
+
+
+def _extract_iocs(text: str) -> dict:
+    """Extract IPs and SHA256 hashes from free text. Filters private/loopback IPs."""
+    iocs: dict = {}
+    ips = list(dict.fromkeys(
+        ip for ip in _IOC_IPv4.findall(text)
+        if not _PRIVATE_IP.match(ip)
+    ))[:6]
+    if ips:
+        iocs["ips"] = ips
+    hashes = list(dict.fromkeys(_IOC_SHA256.findall(text)))[:3]
+    if hashes:
+        iocs["sha256"] = hashes
+    return iocs
+
+
+def _parse_cpe_products(configurations: list) -> list:
+    """Extract affected vendor/product names from NVD CPE configuration nodes."""
+    seen, products = set(), []
+    for config in configurations:
+        for node in config.get("nodes", []):
+            for match in node.get("cpeMatch", []):
+                if not match.get("vulnerable"):
+                    continue
+                parts = match.get("criteria", "").split(":")
+                if len(parts) < 5:
+                    continue
+                vendor  = parts[3].replace("_", " ").title()
+                product = parts[4].replace("_", " ").title()
+                v_start = match.get("versionStartIncluding", "")
+                v_end   = match.get("versionEndExcluding",   "")
+                if v_start and v_end:
+                    label = f"{vendor} {product} {v_start}–{v_end}"
+                elif v_start:
+                    label = f"{vendor} {product} ≥{v_start}"
+                elif v_end:
+                    label = f"{vendor} {product} <{v_end}"
+                else:
+                    label = f"{vendor} {product}"
+                if label not in seen:
+                    seen.add(label)
+                    products.append(label)
+                if len(products) >= 5:
+                    return products
+    return products
 
 
 # ══ Public entry point ═════════════════════════════════════════════════════════
@@ -207,6 +256,13 @@ def fetch_all_data() -> tuple:
             text = item.get("title", "") + " " + item.get("description", "")
             if any(c in kev_cve_ids for c in [m.upper() for m in CVE_RE.findall(text)]):
                 item["has_exploit"] = True
+
+    # ── IOC extraction ─────────────────────────────────────────────────────────
+    for item in items:
+        text = item.get("title", "") + " " + item.get("description", "")
+        iocs = _extract_iocs(text)
+        if iocs:
+            item["iocs"] = iocs
 
     # ── GitHub trending security repos ─────────────────────────────────────────
     repos: list = []
@@ -391,6 +447,7 @@ def _fetch_nvd(cutoff: datetime) -> list:
         short_desc = desc[:90].rstrip() + ("…" if len(desc) > 90 else "")
         title = f"{cve_id} — {short_desc}" if short_desc else cve_id
 
+        affected = _parse_cpe_products(cve.get("configurations", []))
         items.append(_normalise(
             title=title,
             url=f"https://nvd.nist.gov/vuln/detail/{cve_id}",
@@ -399,7 +456,7 @@ def _fetch_nvd(cutoff: datetime) -> list:
             pub_dt=pub_dt,
             severity_hint=severity_hint,
             category_hint="cve_vuln",
-            extra={"cvss": cvss_score},
+            extra={"cvss": cvss_score, "affected_products": affected},
         ))
 
     # Respect rate limit: 5 req / 30 s without key

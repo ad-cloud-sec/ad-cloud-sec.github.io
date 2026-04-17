@@ -421,6 +421,29 @@ def _render_item_card(item: dict) -> str:
     kev_html     = '<span class="kev-badge">KEV ⚑</span>'        if item.get("kev")         else ""
     exploit_html = '<span class="exploit-badge">PoC Public</span>' if item.get("has_exploit") and not item.get("kev") else ""
 
+    affected = item.get("affected_products", [])
+    affected_html = ""
+    if affected:
+        tags = "".join(f'<span class="affected-tag">{html.escape(p)}</span>' for p in affected)
+        affected_html = f'<div class="affected-row"><span class="affected-label">Affects:</span>{tags}</div>'
+
+    iocs = item.get("iocs", {})
+    ioc_html = ""
+    if iocs:
+        parts = []
+        for ip in iocs.get("ips", []):
+            parts.append(f'<code class="ioc-val">{html.escape(ip)}</code>')
+        for h in iocs.get("sha256", []):
+            parts.append(f'<code class="ioc-val ioc-hash">{h[:16]}…</code>')
+        if parts:
+            ioc_html = f'<div class="ioc-row"><span class="ioc-label">IOCs:</span>{"".join(parts)}</div>'
+
+    ttps = item.get("ttps", [])
+    ttp_html = ""
+    if ttps:
+        badges = "".join(f'<a href="https://attack.mitre.org/techniques/{t}/" target="_blank" class="ttp-badge">{t}</a>' for t in ttps[:4])
+        ttp_html = f'<div class="ttp-row">{badges}</div>'
+
     source_count = item.get("source_count", 1)
     if source_count >= 5:
         trending_html = f'<span class="trending-badge hot">{source_count} sources</span>'
@@ -444,6 +467,9 @@ def _render_item_card(item: dict) -> str:
             <a href="{url}" target="_blank" rel="noopener noreferrer">{title_html}</a>
           </h3>
           <p class="card-summary">{summary}</p>
+          {affected_html}
+          {ioc_html}
+          {ttp_html}
           <div class="card-footer">
             <span class="sev-pill {sev_pill}">{sev_label}</span>
             {cvss_html}
@@ -1216,6 +1242,22 @@ section { scroll-margin-top: calc(var(--topbar-h) + var(--header-h) + 12px); }
 .hc-summary { font-size: 12.5px; color: var(--text-2); line-height: 1.65; flex: 1; }
 .hc-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hc-source { font-size: 10px; color: var(--text-3); margin-left: 4px; }
+
+/* ── Affected products ───────────────────────────────────────────────────── */
+.affected-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.affected-label { font-size: 9.5px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; }
+.affected-tag { font-size: 10px; font-family: var(--mono); color: #93c5fd; background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.2); border-radius: var(--r-sm); padding: 1px 7px; }
+
+/* ── IOCs ────────────────────────────────────────────────────────────────── */
+.ioc-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.ioc-label { font-size: 9.5px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; }
+.ioc-val { font-family: var(--mono); font-size: 10px; color: #f9a8d4; background: rgba(236,72,153,.08); border: 1px solid rgba(236,72,153,.18); border-radius: var(--r-sm); padding: 1px 7px; }
+.ioc-hash { color: #d8b4fe; background: rgba(168,85,247,.08); border-color: rgba(168,85,247,.18); }
+
+/* ── MITRE ATT&CK TTPs ───────────────────────────────────────────────────── */
+.ttp-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.ttp-badge { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .05em; color: #6ee7b7; background: rgba(0,200,150,.08); border: 1px solid rgba(0,200,150,.2); border-radius: var(--r-sm); padding: 1px 7px; transition: background .15s; }
+.ttp-badge:hover { background: rgba(0,200,150,.16); color: #fff; opacity: 1; }
 
 /* ── EPSS badge ──────────────────────────────────────────────────────────── */
 .epss-badge {

@@ -410,6 +410,25 @@ def _render_item_card(item: dict) -> str:
     cvss      = item.get("cvss")
     cvss_html = f'<span class="cvss-badge">CVSS&nbsp;{cvss:.1f}</span>' if cvss else ""
 
+    epss = item.get("epss")
+    if epss and epss >= 0.7:
+        epss_html = f'<span class="epss-badge epss-high">EPSS&nbsp;{epss:.0%}</span>'
+    elif epss and epss >= 0.3:
+        epss_html = f'<span class="epss-badge epss-med">EPSS&nbsp;{epss:.0%}</span>'
+    else:
+        epss_html = ""
+
+    kev_html     = '<span class="kev-badge">KEV ⚑</span>'        if item.get("kev")         else ""
+    exploit_html = '<span class="exploit-badge">PoC Public</span>' if item.get("has_exploit") and not item.get("kev") else ""
+
+    source_count = item.get("source_count", 1)
+    if source_count >= 5:
+        trending_html = f'<span class="trending-badge hot">{source_count} sources</span>'
+    elif source_count >= 3:
+        trending_html = f'<span class="trending-badge">{source_count} sources</span>'
+    else:
+        trending_html = ""
+
     pub_dt = item.get("published_dt")
     is_breaking = pub_dt and (datetime.now(timezone.utc) - (pub_dt if pub_dt.tzinfo else pub_dt.replace(tzinfo=timezone.utc))).total_seconds() < 7200
     breaking_tag = '<span class="breaking-tag">BREAKING</span>' if is_breaking else ""
@@ -418,6 +437,7 @@ def _render_item_card(item: dict) -> str:
           <div class="card-top">
             <span class="card-source">{source}</span>
             {breaking_tag}
+            {trending_html}
             <span class="card-time">{time_ago}</span>
           </div>
           <h3 class="card-title">
@@ -427,6 +447,9 @@ def _render_item_card(item: dict) -> str:
           <div class="card-footer">
             <span class="sev-pill {sev_pill}">{sev_label}</span>
             {cvss_html}
+            {epss_html}
+            {kev_html}
+            {exploit_html}
             <a href="{url}" target="_blank" rel="noopener noreferrer" class="read-link">Read {_I['link']}</a>
           </div>
         </article>"""
@@ -1193,6 +1216,38 @@ section { scroll-margin-top: calc(var(--topbar-h) + var(--header-h) + 12px); }
 .hc-summary { font-size: 12.5px; color: var(--text-2); line-height: 1.65; flex: 1; }
 .hc-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hc-source { font-size: 10px; color: var(--text-3); margin-left: 4px; }
+
+/* ── EPSS badge ──────────────────────────────────────────────────────────── */
+.epss-badge {
+  font-size: 9.5px; font-weight: 700; font-family: var(--mono); letter-spacing: .05em;
+  padding: 2px 7px; border-radius: var(--r-sm); border: 1px solid; flex-shrink: 0;
+}
+.epss-high { color: #fdba74; background: rgba(249,115,22,.15); border-color: rgba(249,115,22,.35); box-shadow: 0 0 6px rgba(249,115,22,.2); }
+.epss-med  { color: #fde68a; background: rgba(234,179,8,.12);  border-color: rgba(234,179,8,.28); }
+
+/* ── KEV / Exploit badges ────────────────────────────────────────────────── */
+.kev-badge {
+  font-size: 9.5px; font-weight: 800; font-family: var(--mono); letter-spacing: .06em;
+  color: #fca5a5; background: rgba(244,63,94,.18); border: 1px solid rgba(244,63,94,.4);
+  border-radius: var(--r-sm); padding: 2px 8px; flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(244,63,94,.25);
+}
+.exploit-badge {
+  font-size: 9.5px; font-weight: 700; font-family: var(--mono); letter-spacing: .05em;
+  color: #fb923c; background: rgba(249,115,22,.14); border: 1px solid rgba(249,115,22,.32);
+  border-radius: var(--r-sm); padding: 2px 8px; flex-shrink: 0;
+}
+
+/* ── Trending badges ─────────────────────────────────────────────────────── */
+.trending-badge {
+  font-size: 9.5px; font-weight: 700; font-family: var(--mono);
+  color: var(--brand); background: var(--brand-dim); border: 1px solid var(--brand-border);
+  border-radius: var(--r-sm); padding: 1px 7px; flex-shrink: 0;
+}
+.trending-badge.hot {
+  color: #f97316; background: rgba(249,115,22,.1); border-color: rgba(249,115,22,.28);
+  animation: blink 2s ease-in-out infinite;
+}
 
 /* ── Sidebar live/top badge ──────────────────────────────────────────────── */
 .sb-badge-live {

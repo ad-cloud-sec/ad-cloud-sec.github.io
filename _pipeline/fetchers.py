@@ -92,6 +92,11 @@ RSS_FEEDS = [
     {"name": "NCSC UK",                "url": "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml"},
     {"name": "CERT-EU",                "url": "https://cert.europa.eu/publications/security-advisories/feed"},
     {"name": "ASD ACSC Alerts",        "url": "https://www.cyber.gov.au/about-us/view-all-content/alerts-and-advisories/rss"},
+    # ── Vendor security advisories ────────────────────────────────────────────
+    {"name": "MSRC",                    "url": "https://msrc.microsoft.com/blog/feed/"},
+    {"name": "Cisco Security",          "url": "https://sec.cloudapps.cisco.com/security/center/rss/rss_rsp_advisories.xml"},
+    {"name": "VMware Security",         "url": "https://blogs.vmware.com/security/feed"},
+    {"name": "Red Hat Security",        "url": "https://www.redhat.com/en/rss/blog/channel/security"},
     # ── Security product launches & industry news ──────────────────────────────
     {"name": "Help Net Security",       "url": "https://www.helpnetsecurity.com/feed/"},
     {"name": "SC Media",                "url": "https://www.scmagazine.com/feed/"},
@@ -106,6 +111,10 @@ RSS_FEEDS = [
 NVD_API_URL   = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 CISA_KEV_URL  = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 GITHUB_API    = "https://api.github.com/search/repositories"
+EPSS_API      = "https://api.first.org/data/v1/epss"
+HN_API        = "https://hn.algolia.com/api/v1/search"
+
+CVE_RE = re.compile(r'CVE-\d{4}-\d+', re.IGNORECASE)
 
 
 # ══ Public entry point ═════════════════════════════════════════════════════════
@@ -144,9 +153,60 @@ def fetch_all_data() -> tuple:
     except Exception as exc:
         logger.warning("  ✗ %-26s FAILED: %s", "CISA KEV", exc)
 
+    # ── Hacker News security ───────────────────────────────────────────────────
+    try:
+        hn = _fetch_hn_security(cutoff)
+        items.extend(hn)
+        logger.info("  ✓ %-26s %d items", "Hacker News", len(hn))
+    except Exception as exc:
+        logger.warning("  ✗ %-26s FAILED: %s", "Hacker News", exc)
+
     # Deduplicate before returning
     items = _deduplicate(items)
     logger.info("  → %d unique items after deduplication", len(items))
+
+    # ── EPSS enrichment ────────────────────────────────────────────────────────
+    # Collect all CVE IDs mentioned across all items
+    all_cve_ids = list({
+        m.upper()
+        for item in items
+        for m in CVE_RE.findall(item.get("title", "") + " " + item.get("description", ""))
+    })
+    if all_cve_ids:
+        logger.info("  Fetching EPSS scores for %d CVEs …", len(all_cve_ids))
+        epss_data = _fetch_epss(all_cve_ids)
+        logger.info("  ✓ EPSS scores received: %d", len(epss_data))
+        for item in items:
+            text = item.get("title", "") + " " + item.get("description", "")
+            item_cves = [m.upper() for m in CVE_RE.findall(text)]
+            if not item_cves:
+                continue
+            scores = [(epss_data[c]["epss"], epss_data[c]["pct"]) for c in item_cves if c in epss_data]
+            if scores:
+                best = max(scores, key=lambda x: x[0])
+                item["epss"]     = best[0]
+                item["epss_pct"] = best[1]
+                # Boost severity: high EPSS means likely to be exploited
+                if best[0] >= 0.5 and item.get("severity_hint") == "Interesting":
+                    item["severity_hint"] = "High"
+
+    # ── Exploit flag cross-reference ───────────────────────────────────────────
+    # Collect KEV CVE IDs to cross-reference against all items
+    kev_cve_ids = set()
+    for item in items:
+        if item.get("kev"):
+            for m in CVE_RE.findall(item.get("title", "")):
+                kev_cve_ids.add(m.upper())
+
+    exploit_sources = {"CISA KEV", "Exploit-DB", "Zero Day Initiative"}
+    for item in items:
+        if item.get("source") in exploit_sources:
+            item["has_exploit"] = True
+        # Mark any item mentioning a KEV CVE as having a known exploit
+        if not item.get("has_exploit"):
+            text = item.get("title", "") + " " + item.get("description", "")
+            if any(c in kev_cve_ids for c in [m.upper() for m in CVE_RE.findall(text)]):
+                item["has_exploit"] = True
 
     # ── GitHub trending security repos ─────────────────────────────────────────
     repos: list = []
@@ -226,6 +286,12 @@ def _normalise(
         "severity":      None,
         "category":      None,
         "include":       None,
+        # Intel enrichment (filled by fetch_all_data):
+        "epss":          None,
+        "epss_pct":      None,
+        "has_exploit":   False,
+        "kev":           False,
+        "source_count":  1,
     }
     if extra:
         d.update(extra)
@@ -370,15 +436,18 @@ def _fetch_cisa_kev(cutoff: datetime) -> list:
             f"(Due: {vuln.get('dueDate', 'N/A')})"
         ).strip()
 
-        items.append(_normalise(
+        item = _normalise(
             title=title,
             url=f"https://nvd.nist.gov/vuln/detail/{cve_id}",
             description=desc[:600],
             source="CISA KEV",
             pub_dt=pub_dt,
-            severity_hint="Critical",   # KEV = actively exploited
+            severity_hint="Critical",
             category_hint="cve_vuln",
-        ))
+        )
+        item["has_exploit"] = True
+        item["kev"] = True
+        items.append(item)
 
     return items
 
@@ -459,34 +528,116 @@ def _fetch_github_security() -> list:
     return repos[:30]
 
 
+# ── EPSS enrichment ───────────────────────────────────────────────────────────
+
+def _fetch_epss(cve_ids: list) -> dict:
+    """Fetch EPSS exploitation probability scores from FIRST.org. Free, no key."""
+    if not cve_ids:
+        return {}
+    result = {}
+    try:
+        for i in range(0, len(cve_ids), 100):
+            batch = cve_ids[i:i+100]
+            resp = requests.get(
+                EPSS_API,
+                params={"cve": ",".join(batch)},
+                headers=HEADERS,
+                timeout=TIMEOUT,
+            )
+            resp.raise_for_status()
+            for entry in resp.json().get("data", []):
+                cve = entry.get("cve", "").upper()
+                result[cve] = {
+                    "epss": round(float(entry.get("epss", 0)), 4),
+                    "pct":  round(float(entry.get("percentile", 0)), 4),
+                }
+            time.sleep(0.5)
+    except Exception as exc:
+        logger.warning("  EPSS fetch failed: %s", exc)
+    return result
+
+
+# ── HackerNews security ────────────────────────────────────────────────────────
+
+def _fetch_hn_security(cutoff: datetime) -> list:
+    """Fetch security stories from HackerNews via Algolia API. Free, no key."""
+    cutoff_ts = int(cutoff.timestamp())
+    queries   = ["vulnerability exploit CVE", "ransomware breach attack", "zero day security"]
+    seen, items = set(), []
+
+    for q in queries:
+        try:
+            resp = requests.get(
+                HN_API,
+                params={"tags": "story", "query": q, "hitsPerPage": 15,
+                        "numericFilters": f"created_at_i>{cutoff_ts}"},
+                headers=HEADERS,
+                timeout=TIMEOUT,
+            )
+            resp.raise_for_status()
+            for hit in resp.json().get("hits", []):
+                oid   = hit.get("objectID", "")
+                title = (hit.get("title") or "").strip()
+                url   = hit.get("url") or f"https://news.ycombinator.com/item?id={oid}"
+                if not title or oid in seen:
+                    continue
+                seen.add(oid)
+                created = hit.get("created_at_i", 0)
+                pub_dt  = datetime.fromtimestamp(created, tz=timezone.utc) if created else None
+                pts     = hit.get("points", 0)
+                cmts    = hit.get("num_comments", 0)
+                items.append(_normalise(
+                    title=title,
+                    url=url,
+                    description=f"{pts} points · {cmts} comments on Hacker News",
+                    source="Hacker News",
+                    pub_dt=pub_dt,
+                ))
+        except Exception as exc:
+            logger.warning("  HN query '%s' failed: %s", q, exc)
+        time.sleep(0.3)
+
+    return items
+
+
 # ── Deduplication ─────────────────────────────────────────────────────────────
 
 def _deduplicate(items: list, threshold: float = DEDUP_THRESH) -> list:
     """
-    Remove near-duplicate items.
+    Remove near-duplicate items, tracking source_count for trending signal.
     Uses URL exact-match first, then title similarity via SequenceMatcher.
-    O(n²) — acceptable for typical feed volumes (a few hundred items).
     """
-    unique: list = []
-    seen_urls: set = set()
-    seen_titles: list = []
+    unique: list  = []
+    seen_urls: dict  = {}   # url -> index in unique
+    seen_titles: list = []  # list of (normalised_title, index_in_unique)
 
     for item in items:
         url   = item.get("url", "")
         title = item.get("title", "").lower()
 
+        # URL exact match — increment count on canonical item
         if url and url in seen_urls:
+            unique[seen_urls[url]]["source_count"] = unique[seen_urls[url]].get("source_count", 1) + 1
             continue
 
-        if any(
-            difflib.SequenceMatcher(None, title, t).ratio() > threshold
-            for t in seen_titles
-        ):
+        # Title similarity match
+        matched_idx = None
+        for t, idx in seen_titles:
+            if difflib.SequenceMatcher(None, title, t).ratio() > threshold:
+                matched_idx = idx
+                break
+
+        if matched_idx is not None:
+            unique[matched_idx]["source_count"] = unique[matched_idx].get("source_count", 1) + 1
             continue
 
+        # New unique item
+        idx = len(unique)
+        item = dict(item)
+        item["source_count"] = item.get("source_count", 1)
         if url:
-            seen_urls.add(url)
-        seen_titles.append(title)
+            seen_urls[url] = idx
+        seen_titles.append((title, idx))
         unique.append(item)
 
     return unique

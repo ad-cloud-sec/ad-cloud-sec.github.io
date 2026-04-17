@@ -568,10 +568,18 @@ def _kw_categorise(items: list) -> dict:
     categorised: dict = {k: [] for k in CATEGORIES}
     for item in items:
         cat = _kw_guess_category(item)
+        # Severity: start with hint, then boost based on intel signals
+        sev = item.get("severity_hint", "Interesting")
+        if item.get("kev"):
+            sev = "Critical"
+        elif item.get("has_exploit") and sev == "Interesting":
+            sev = "High"
+        elif (item.get("epss") or 0) >= 0.5 and sev == "Interesting":
+            sev = "High"
         categorised[cat].append({
             **item,
             "summary":  item.get("description") or item["title"],
-            "severity": item.get("severity_hint", "Interesting"),
+            "severity": sev,
             "category": cat,
             "include":  True,
         })

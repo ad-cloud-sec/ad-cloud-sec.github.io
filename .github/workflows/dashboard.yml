@@ -1,0 +1,62 @@
+name: AD-SEC INTEL — Daily Dashboard
+
+on:
+  schedule:
+    - cron: '30 3 * * *'   # 09:00 IST = 03:30 UTC daily
+  workflow_dispatch:         # allow manual runs from the GitHub Actions tab
+
+permissions:
+  contents: write            # needed to commit dashboard.html back to the repo
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: '_pipeline/requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r _pipeline/requirements.txt
+
+      # Persist the AI summary cache across daily runs so Claude only
+      # processes items it hasn't seen before — saves API cost.
+      - name: Restore AI summary cache
+        uses: actions/cache@v4
+        with:
+          path: _pipeline/summary_cache.json
+          key: summary-cache-${{ github.run_id }}
+          restore-keys: summary-cache-
+
+      - name: Generate dashboard
+        env:
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          NVD_API_KEY:        ${{ secrets.NVD_API_KEY }}
+          GITHUB_TOKEN:       ${{ github.token }}
+          GMAIL_ADDRESS:      ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_RECIPIENT:    ${{ secrets.GMAIL_RECIPIENT }}
+        run: python _pipeline/main.py --no-browser
+
+      - name: Publish to site root
+        run: cp _pipeline/dashboard.html index.html
+
+      - name: Commit & push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: dashboard $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          else
+            echo "Dashboard unchanged — skipping commit."
+          fi

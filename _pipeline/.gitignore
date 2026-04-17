@@ -1,0 +1,7 @@
+.env
+summary_cache.json
+dashboard.html
+archive/
+__pycache__/
+*.pyc
+*.log

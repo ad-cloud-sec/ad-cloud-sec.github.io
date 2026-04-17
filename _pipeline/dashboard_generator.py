@@ -162,27 +162,35 @@ def _build_html(data: dict) -> str:
     except Exception:
         ts_display = ts_date = generated_at
 
-    categories  = data.get("categories", {})
-    weekly      = data.get("weekly_digest", {})
-    total_shown = data.get("total_shown", 0)
-    total_raw   = data.get("total_raw", 0)
+    categories     = data.get("categories", {})
+    weekly         = data.get("weekly_digest", {})
+    total_shown    = data.get("total_shown", 0)
+    total_raw      = data.get("total_raw", 0)
+    today_count    = data.get("today_count", 0)
+    yesterday_count= data.get("yesterday_count", 0)
 
     critical_n = sum(1 for items in categories.values() for i in items if i.get("severity") == "Critical")
     high_n     = sum(1 for items in categories.values() for i in items if i.get("severity") == "High")
 
-    # Sections
-    sidebar_html  = _render_sidebar(categories)
-    sections_html = "".join(_render_section(CAT_META[k], categories.get(k, []), k) for k in CAT_ORDER)
-    digest_html   = _render_digest(weekly)
+    # Trend delta
+    if yesterday_count > 0:
+        delta     = today_count - yesterday_count
+        delta_sign= "+" if delta > 0 else ""
+        delta_cls = "tb-delta-up" if delta > 0 else ("tb-delta-down" if delta < 0 else "tb-delta-flat")
+        delta_html= f'<span class="tb-delta {delta_cls}">{delta_sign}{delta} vs yday</span>'
+    else:
+        delta_html = ""
 
-    # Breaking banner (only when critical items exist)
-    alert_word    = "alert" if critical_n == 1 else "alerts"
-    breaking_html = f"""
-<div class="breaking-banner" role="alert">
-  <span class="breaking-dot"></span>
-  <span class="breaking-label">LIVE</span>
-  <span class="breaking-text">{critical_n} critical {alert_word} in today\'s feed — <a href="#cve-vuln">view CVEs &amp; Vulnerabilities</a></span>
-</div>""" if critical_n > 0 else ""
+    # Sections
+    sidebar_html     = _render_sidebar(categories)
+    sections_html    = "".join(_render_section(CAT_META[k], categories.get(k, []), k) for k in CAT_ORDER)
+    digest_html      = _render_digest(weekly)
+    top_stories_html = _render_top_stories(_pick_top_stories(categories))
+
+    # THREATCON bar (replaces breaking banner)
+    tc_level, tc_color, tc_bg, tc_desc, tc_rank = _threatcon_level(critical_n, high_n)
+    threatcon_html = _render_threatcon_bar(tc_level, tc_color, tc_bg, tc_desc, tc_rank)
+    breaking_html  = threatcon_html  # keep var name for template below
 
     font_face  = _build_font_face()
     minified   = _minify_css(font_face + _CSS)
@@ -218,7 +226,7 @@ def _build_html(data: dict) -> str:
   <div class="topbar-stats">
     <span class="tb-stat tb-critical">{critical_n} Critical</span>
     <span class="tb-stat tb-high">{high_n} High</span>
-    <span class="tb-stat tb-total">{total_shown} Stories</span>
+    <span class="tb-stat tb-total">{total_shown} Stories {delta_html}</span>
   </div>
 </div>
 
@@ -271,6 +279,8 @@ def _build_html(data: dict) -> str:
   <!-- Main -->
   <main class="main-content">
 
+{top_stories_html}
+
     <section id="weekly-digest" class="digest-section">
       <div class="section-header" data-target="digest-body">
         <div class="sh-left">
@@ -317,6 +327,11 @@ def _build_html(data: dict) -> str:
 
 def _render_sidebar(categories: dict) -> str:
     lines = []
+    lines.append(f"""      <a href="#top-stories" class="sb-link sb-top">
+        <span class="sb-icon">{_I['star']}</span>
+        <span class="sb-label">Lead Stories</span>
+        <span class="sb-badge sb-badge-live">LIVE</span>
+      </a>""")
     lines.append(f"""      <a href="#weekly-digest" class="sb-link sb-digest">
         <span class="sb-icon">{_I['book']}</span>
         <span class="sb-label">Weekly Brief</span>
@@ -395,9 +410,14 @@ def _render_item_card(item: dict) -> str:
     cvss      = item.get("cvss")
     cvss_html = f'<span class="cvss-badge">CVSS&nbsp;{cvss:.1f}</span>' if cvss else ""
 
+    pub_dt = item.get("published_dt")
+    is_breaking = pub_dt and (datetime.now(timezone.utc) - (pub_dt if pub_dt.tzinfo else pub_dt.replace(tzinfo=timezone.utc))).total_seconds() < 7200
+    breaking_tag = '<span class="breaking-tag">BREAKING</span>' if is_breaking else ""
+
     return f"""        <article class="item-card {sev_class} searchable">
           <div class="card-top">
             <span class="card-source">{source}</span>
+            {breaking_tag}
             <span class="card-time">{time_ago}</span>
           </div>
           <h3 class="card-title">
@@ -465,6 +485,122 @@ def _fmt_time_ago(dt: Optional[datetime]) -> str:
     elif total_sec < 604800:
         return f"{int(total_sec / 86400)}d ago"
     return f"{int(total_sec / 604800)}w ago"
+
+
+# ── THREATCON ──────────────────────────────────────────────────────────────────
+
+def _threatcon_level(critical_n: int, high_n: int):
+    if critical_n > 0:
+        return ("CRITICAL", "#f43f5e", "rgba(244,63,94,0.07)",
+                f"{critical_n} critical {'advisory' if critical_n == 1 else 'advisories'} — immediate review recommended", 3)
+    elif high_n >= 3:
+        return ("HIGH", "#f97316", "rgba(249,115,22,0.05)",
+                f"{high_n} high-severity threats identified today", 2)
+    elif high_n > 0:
+        return ("ELEVATED", "#eab308", "rgba(234,179,8,0.05)",
+                "Elevated threat activity — monitor high-severity items", 1)
+    else:
+        return ("NORMAL", "#00c896", "rgba(0,200,150,0.04)",
+                "Standard threat environment — no critical or high advisories", 0)
+
+
+def _render_threatcon_bar(level: str, color: str, bg: str, desc: str, rank: int) -> str:
+    pips = []
+    labels = [("N", "NORMAL", 0), ("E", "ELEVATED", 1), ("H", "HIGH", 2), ("C", "CRITICAL", 3)]
+    for ltr, _, r in labels:
+        if r < rank:
+            pips.append(f'<span class="tc-pip tc-pip-fill" style="background:{color};opacity:.45">{ltr}</span>')
+        elif r == rank:
+            pips.append(f'<span class="tc-pip tc-pip-active" style="background:{color};box-shadow:0 0 8px {color}">{ltr}</span>')
+        else:
+            pips.append(f'<span class="tc-pip">{ltr}</span>')
+    pip_html = "".join(pips)
+    pulse = ' tc-dot-pulse' if level == "CRITICAL" else ''
+    return f"""
+<div class="threatcon-bar" style="background:{bg};border-color:color-mix(in srgb,{color} 28%,transparent)" role="status">
+  <span class="tc-dot{pulse}" style="background:{color};box-shadow:0 0 8px {color}"></span>
+  <span class="tc-badge" style="color:{color};background:color-mix(in srgb,{color} 14%,transparent);border-color:color-mix(in srgb,{color} 30%,transparent)">THREATCON</span>
+  <span class="tc-level-name" style="color:{color}">{level}</span>
+  <span class="tc-divider">—</span>
+  <span class="tc-desc">{html.escape(desc)}</span>
+  <div class="tc-scale">{pip_html}</div>
+</div>"""
+
+
+# ── Top Stories ────────────────────────────────────────────────────────────────
+
+_SEV_RANK = {"Critical": 0, "High": 1, "Interesting": 2}
+
+
+def _pick_top_stories(categories: dict) -> list:
+    priority = ["cve_vuln", "threat_intel", "ai_llm_security", "offensive_defensive", "cloud_security"]
+    seen, stories = set(), []
+    for cat in priority:
+        items = categories.get(cat, [])
+        if not items:
+            continue
+        def _key(i):
+            s  = _SEV_RANK.get(i.get("severity", "Interesting"), 2)
+            dt = i.get("published_dt")
+            return (s, -(dt.timestamp() if dt else 0))
+        for item in sorted(items, key=_key):
+            url = item.get("url")
+            if url and url not in seen:
+                seen.add(url)
+                stories.append((cat, item))
+                break
+        if len(stories) >= 3:
+            break
+    return stories
+
+
+def _render_top_stories(stories: list) -> str:
+    if not stories:
+        return ""
+    cards = []
+    for cat_key, item in stories:
+        meta       = CAT_META.get(cat_key, {})
+        color      = meta.get("color", "#00c896")
+        cat_label  = meta.get("label", cat_key)
+        icon       = _I.get(meta.get("icon", "star"), "")
+        title_esc  = html.escape(item.get("title", "Untitled"))
+        title_html = _CVE_RE.sub(r'<code class="cve-id">\1</code>', title_esc)
+        summary    = html.escape(item.get("summary") or item.get("description") or "")
+        source     = html.escape(item.get("source", ""))
+        url        = html.escape(item.get("url", "#"))
+        time_ago   = _fmt_time_ago(item.get("published_dt"))
+        sev        = item.get("severity", "Interesting")
+        cvss       = item.get("cvss")
+        cvss_html  = f'<span class="cvss-badge">CVSS&nbsp;{cvss:.1f}</span>' if cvss else ""
+        sev_map    = {"Critical": ("sev-pill-critical", "Critical"), "High": ("sev-pill-high", "High")}
+        sev_cls, sev_lbl = sev_map.get(sev, ("sev-pill-interesting", "Info"))
+        cards.append(f"""        <article class="hero-card searchable" style="--hc:{color}">
+          <div class="hc-meta">
+            <span class="hc-cat-icon">{icon}</span>
+            <span class="hc-cat-label" style="color:{color}">{html.escape(cat_label)}</span>
+            <span class="hc-time">{time_ago}</span>
+          </div>
+          <h3 class="hc-title"><a href="{url}" target="_blank" rel="noopener noreferrer">{title_html}</a></h3>
+          <p class="hc-summary">{summary}</p>
+          <div class="hc-footer">
+            <span class="sev-pill {sev_cls}">{sev_lbl}</span>
+            {cvss_html}
+            <span class="hc-source">via {source}</span>
+            <a href="{url}" target="_blank" rel="noopener noreferrer" class="read-link">Read {_I['link']}</a>
+          </div>
+        </article>""")
+    cards_html = "\n".join(cards)
+    return f"""
+    <section id="top-stories" class="top-stories-section">
+      <div class="ts-header">
+        <span class="ts-eyebrow">● LIVE</span>
+        <h2 class="ts-heading">Today's Lead Stories</h2>
+        <span class="ts-sub">Highest-priority items across all categories</span>
+      </div>
+      <div class="hero-grid">
+{cards_html}
+      </div>
+    </section>"""
 
 
 # ══ CSS ════════════════════════════════════════════════════════════════════════
@@ -960,6 +1096,112 @@ kbd {
 /* ── Scroll offset ───────────────────────────────────────────────────────── */
 section { scroll-margin-top: calc(var(--topbar-h) + var(--header-h) + 12px); }
 
+/* ── THREATCON bar ───────────────────────────────────────────────────────── */
+.threatcon-bar {
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid;
+  padding: 7px 22px; display: flex; align-items: center; gap: 10px; font-size: 12px;
+  flex-wrap: wrap;
+}
+.tc-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.tc-dot-pulse { animation: blink 1.6s ease-in-out infinite; }
+.tc-badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .09em;
+  border: 1px solid; border-radius: var(--r-sm); padding: 1px 7px; flex-shrink: 0;
+}
+.tc-level-name { font-family: var(--mono); font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+.tc-divider { color: var(--text-3); }
+.tc-desc { color: var(--text-2); flex: 1; min-width: 0; }
+.tc-scale { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+.tc-pip {
+  width: 22px; height: 22px; border-radius: var(--r-sm);
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05); color: var(--text-3);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.tc-pip-active {
+  color: #fff; font-weight: 800;
+  animation: blink 1.6s ease-in-out infinite;
+}
+
+/* ── Trend delta ─────────────────────────────────────────────────────────── */
+.tb-delta {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: var(--r-sm); margin-left: 4px;
+}
+.tb-delta-up   { color: #fca5a5; background: rgba(244,63,94,.12); }
+.tb-delta-down { color: #6ee7b7; background: rgba(0,200,150,.12); }
+.tb-delta-flat { color: var(--text-3); background: rgba(255,255,255,.05); }
+
+/* ── BREAKING tag ────────────────────────────────────────────────────────── */
+.breaking-tag {
+  font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .1em;
+  color: #fca5a5; background: rgba(244,63,94,.18); border: 1px solid rgba(244,63,94,.35);
+  border-radius: var(--r-sm); padding: 1px 6px;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+/* ── Top Stories / Lead Stories ──────────────────────────────────────────── */
+.top-stories-section {
+  background: rgb(10,13,28);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-top: 2px solid var(--brand);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md), var(--glass-inset), 0 0 48px var(--brand-glow);
+  overflow: hidden;
+}
+.ts-header {
+  display: flex; align-items: center; gap: 12px; padding: 15px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.ts-eyebrow {
+  font-family: var(--mono); font-size: 10px; font-weight: 800; letter-spacing: .1em;
+  color: var(--critical); animation: blink 1.6s ease-in-out infinite;
+}
+.ts-heading { font-size: 15px; font-weight: 700; color: var(--text-1); }
+.ts-sub { font-size: 11px; color: var(--text-3); margin-left: 4px; }
+.hero-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px; padding: 18px 20px;
+}
+.hero-card {
+  background: rgb(14,18,38);
+  border: 1px solid color-mix(in srgb, var(--hc) 18%, rgba(255,255,255,0.07));
+  border-top: 2px solid var(--hc);
+  border-radius: var(--r-lg); padding: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: var(--shadow-sm), 0 0 24px color-mix(in srgb, var(--hc) 8%, transparent);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s, border-color .2s;
+}
+.hero-card:hover {
+  transform: translateY(-6px) scale(1.005);
+  background: rgb(18,23,48);
+  border-color: color-mix(in srgb, var(--hc) 50%, transparent);
+  box-shadow: var(--shadow-lg), 0 0 48px color-mix(in srgb, var(--hc) 18%, transparent);
+}
+.hc-meta { display: flex; align-items: center; gap: 8px; }
+.hc-cat-icon { width: 16px; height: 16px; display: flex; align-items: center; flex-shrink: 0; }
+.hc-cat-icon svg { width: 14px; height: 14px; }
+.hc-cat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.hc-time { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-left: auto; }
+.hc-title { font-size: 15px; font-weight: 700; line-height: 1.45; }
+.hc-title a { color: var(--text-1); transition: color .15s; }
+.hc-title a:hover { color: var(--brand); opacity: 1; }
+.hc-summary { font-size: 12.5px; color: var(--text-2); line-height: 1.65; flex: 1; }
+.hc-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hc-source { font-size: 10px; color: var(--text-3); margin-left: 4px; }
+
+/* ── Sidebar live/top badge ──────────────────────────────────────────────── */
+.sb-badge-live {
+  background: rgba(244,63,94,.14); border-color: rgba(244,63,94,.3); color: #fca5a5;
+  animation: blink 1.6s ease-in-out infinite;
+}
+.sb-top { color: #fca5a5; }
+.sb-top .sb-icon svg { color: #fca5a5; }
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .sidebar { display: none; }
@@ -1036,4 +1278,17 @@ const io = new IntersectionObserver(entries => {
 }, { rootMargin: '-15% 0px -75% 0px' });
 
 document.querySelectorAll('section[id]').forEach(s => io.observe(s));
+
+// ── Hero grid search ─────────────────────────────────────────────────────────
+const origSearch = doSearch;
+searchInput.addEventListener('input', () => {
+  document.querySelectorAll('.hero-grid').forEach(grid => {
+    const q = searchInput.value.trim().toLowerCase();
+    const visible = [...grid.querySelectorAll('.searchable')].filter(c => !c.classList.contains('search-hidden'));
+    let msg = grid.querySelector('.search-no-results');
+    if (q && visible.length === 0) {
+      if (!msg) { msg = document.createElement('p'); msg.className = 'no-items search-no-results'; msg.textContent = 'No items match.'; grid.appendChild(msg); }
+    } else if (msg) { msg.remove(); }
+  });
+});
 """

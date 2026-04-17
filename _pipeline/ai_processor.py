@@ -272,13 +272,22 @@ def process_all_items(
     categories["new_notable"] = notable_repos + categories["new_notable"]
 
     total_categorised = sum(len(v) for v in categories.values())
+
+    # Trend: compare today's vs yesterday's item counts from the store
+    today_str     = now.date().isoformat()
+    yesterday_str = (now - timedelta(days=1)).date().isoformat()
+    today_count     = sum(1 for e in store.values() if e.get("stored_at", "").startswith(today_str))
+    yesterday_count = sum(1 for e in store.values() if e.get("stored_at", "").startswith(yesterday_str))
+
     return {
-        "categories":    categories,
-        "weekly_digest": weekly_digest,
-        "generated_at":  now.isoformat(),
-        "total_raw":     len(raw_items),
-        "total_shown":   total_categorised,
-        "github_count":  len(github_repos),
+        "categories":      categories,
+        "weekly_digest":   weekly_digest,
+        "generated_at":    now.isoformat(),
+        "total_raw":       len(raw_items),
+        "total_shown":     total_categorised,
+        "github_count":    len(github_repos),
+        "today_count":     today_count,
+        "yesterday_count": yesterday_count,
     }
 
 

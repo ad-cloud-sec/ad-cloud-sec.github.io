@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privileged Accounts and the Claude M365 Connector: Why "User-Scoped" Has Limits Anthropic Didn't Document</title>
+<meta name="description" content="Anthropic's M365 Connector Security Guide promises user-scoped access. Under Microsoft's intersection model, SharePoint Admins get tenant-wide reach. Here's the deployment guidance they didn't write.">
+<link rel="canonical" href="https://ad-cloud-sec.github.io/posts/privileged-accounts-claude-m365-connector.html">
+<meta property="og:title" content="Privileged Accounts and the Claude M365 Connector: Why &quot;User-Scoped&quot; Has Limits Anthropic Didn't Document">
+<meta property="og:description" content="Under Microsoft's intersection model, a SharePoint Admin authenticating the Claude M365 connector gets tenant-wide file access. The Security Guide doesn't mention this. Here's the deployment guidance.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ad-cloud-sec.github.io/posts/privileged-accounts-claude-m365-connector.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Privileged Accounts and the Claude M365 Connector">
+<meta name="twitter:description" content="Under delegated auth, user-scoped access becomes role-scoped access for privileged accounts. Anthropic's Security Guide doesn't document this.">
+<meta name="twitter:label1" content="Reading time">
+<meta name="twitter:data1" content="14 minutes">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Privileged Accounts and the Claude M365 Connector: Why \"User-Scoped\" Has Limits Anthropic Didn't Document",
+  "description": "Anthropic's M365 Connector Security Guide promises user-scoped access. Under Microsoft's intersection model, SharePoint Admins get tenant-wide reach. Here's the deployment guidance they didn't write.",
+  "author": {"@type": "Person", "name": "Amardip Deshpande", "url": "https://ad-cloud-sec.github.io"},
+  "datePublished": "2026-04-08",
+  "dateModified": "2026-04-08",
+  "publisher": {"@type": "Organization", "name": "AD Cloud Security", "url": "https://ad-cloud-sec.github.io"},
+  "url": "https://ad-cloud-sec.github.io/posts/privileged-accounts-claude-m365-connector.html",
+  "keywords": ["AI Security","Microsoft 365","Entra ID","Delegated Permissions","Microsoft Graph","Claude","SharePoint","Detection Engineering","Microsoft Sentinel"]
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #e8e2d9;
+  --ink-light: #a89f8c;
+  --ink-muted: #6b6457;
+  --rule: #1e2130;
+  --code-bg: #0c0e14;
+  --code-border: #1e2130;
+  --accent: #38b2ac;
+  --page: #0f1117;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #0f1117 !important; color-scheme: dark; }
+body { background: var(--page); color: var(--ink); font-family: 'Inter', system-ui, sans-serif; font-size: 18px; line-height: 1.75; font-weight: 300; }
+
+/* Nav */
+.site-nav { max-width: 820px; margin: 0 auto; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--rule); }
+.logo { font-family: 'Fira Code', monospace; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+.back-link { font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--ink-muted); text-decoration: none; transition: color 0.15s; }
+.back-link:hover { color: var(--accent); }
+
+/* Page */
+.page { max-width: 740px; margin: 0 auto; padding: 0 40px 80px; }
+
+/* Masthead */
+.masthead { border-top: 3px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 32px 0 28px; margin-bottom: 56px; }
+.kicker { font-family: 'Fira Code', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 16px; }
+.masthead h1 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: clamp(28px, 5vw, 42px); font-weight: 900; line-height: 1.15; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); margin-bottom: 20px; }
+.deck { font-size: 17px; color: var(--ink-light); font-style: italic; border-left: 2px solid var(--accent); padding-left: 16px; line-height: 1.65; margin-bottom: 20px; }
+
+/* Body */
+section p { margin-bottom: 24px; }
+section p:last-child { margin-bottom: 0; }
+
+/* Headings */
+h2 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); border-bottom: 1px solid var(--rule); padding-bottom: 10px; margin: 52px 0 20px; }
+h2:first-of-type { margin-top: 0; }
+
+/* Lists */
+ul, ol { margin: 0 0 24px 0; padding-left: 28px; }
+li { margin-bottom: 8px; color: var(--ink); }
+li strong { color: var(--ink); font-weight: 600; }
+
+/* Inline code */
+code { font-family: 'Fira Code', monospace; font-size: 14px; background: var(--code-bg); color: var(--accent); padding: 2px 6px; border-radius: 3px; }
+
+/* Code blocks */
+pre { background: var(--code-bg); border: 1px solid var(--code-border); border-left: 3px solid var(--ink-muted); padding: 20px 24px; overflow-x: auto; margin: 32px 0; border-radius: 0 4px 4px 0; }
+pre code { background: none; color: var(--ink-light); font-size: 13px; padding: 0; line-height: 1.65; }
+
+/* Blockquote */
+blockquote { border-left: 2px solid var(--accent); margin: 32px 0; padding: 16px 20px; background: #1a1d27; }
+blockquote p { color: var(--ink-light); font-style: italic; margin-bottom: 0; }
+
+/* Callout */
+.callout { border-left: 2px solid var(--accent); margin: 32px 0; padding: 16px 20px; background: #1a1d27; }
+.callout p { margin-bottom: 0; color: var(--ink-light); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: 32px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th { font-family: 'Fira Code', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-muted); background: #1a1d27; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--rule); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--rule); color: var(--ink-light); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td strong { color: var(--ink); font-weight: 500; }
+td code { font-size: 12px; }
+
+/* References */
+.references { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--rule); }
+.references h2 { font-size: 14px; font-family: 'Fira Code', monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-muted); border-bottom: none; margin: 0 0 16px; }
+.references ol { font-size: 15px; }
+.references a { color: var(--accent); text-decoration: none; }
+.references a:hover { text-decoration: underline; }
+
+/* Bio */
+.bio { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--rule); font-size: 15px; color: var(--ink-muted); font-style: italic; }
+.bio a { color: var(--accent); text-decoration: none; }
+
+/* Footer */
+footer { max-width: 820px; margin: 0 auto; padding: 24px 40px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+footer a { color: var(--ink-muted); text-decoration: none; }
+footer a:hover { color: var(--accent); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .site-nav, footer { padding: 16px 20px; }
+  .page { padding: 0 20px 60px; }
+  h2 { font-size: 20px; }
+  body { font-size: 17px; }
+  pre { padding: 14px 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav" aria-label="Main navigation">
+  <a href="/" class="logo">AD · Cloud Security</a>
+  <a href="/" class="back-link" aria-label="Back to all posts">← All Posts</a>
+</nav>
+
+<main class="page">
+<article>
+
+<header class="masthead">
+  <div class="kicker">AI Security · Microsoft 365 · Entra ID · Delegated Permissions · Detection Engineering</div>
+  <h1>Privileged Accounts and the Claude M365 Connector: Why "User-Scoped" Has Limits Anthropic Didn't Document</h1>
+  <p class="deck">Anthropic's Security Guide promises that users can only access data they already have permission for. Under Microsoft's intersection model, that promise doesn't hold for privileged accounts   and the documentation doesn't say so.</p>
+</header>
+
+<section>
+
+<h2 id="context">Context</h2>
+
+<p>Anthropic's Claude M365 Connector Security Guide makes a clear promise: "Users cannot access other users' private files or emails." For most licensed users in a typical enterprise tenant, that statement holds. What it doesn't account for is how Microsoft's delegated permissions model behaves when the authenticated user holds an administrative Entra ID role. The rest of this post is about that gap.</p>
+
+<p>In short: under delegated authentication, "user-scoped access" becomes "role-scoped access" for privileged accounts. The connector doesn't change this. The Security Guide doesn't mention it.</p>
+
+<h2 id="intersection-model">The Intersection Model</h2>
+
+<p>Microsoft's delegated permissions operate on what they call the intersection model. When an application uses delegated permissions to access the Graph API on behalf of a signed-in user, the effective access is the <strong>intersection</strong> of two factors:</p>
+
+<ol>
+  <li>The permissions (scopes) consented to the application</li>
+  <li>The privileges of the signed-in user, including those assigned through Entra ID RBAC roles</li>
+</ol>
+
+<p>For a standard licensed user with no admin roles, this intersection is restrictive. The app can only reach the user's own mailbox, their own OneDrive, SharePoint sites they have access to, and Teams channels they're a member of.</p>
+
+<p>For a user holding an administrative role, the user-side of that intersection is broader. The app's consented scopes don't change, but the data accessible within those scopes expands.</p>
+
+<p>Microsoft's own documentation confirms this. Their permissions overview states that user permissions include those "assigned through a role-based access control system (RBAC) such as Microsoft Entra RBAC." The identity platform documentation distinguishes between "directory resources by Microsoft Entra role-based access control (RBAC)" and "mail and calendar resources by Exchange Online RBAC."</p>
+
+<p>That last distinction is doing real work. Exchange and SharePoint don't behave the same way under the same delegated permission, which is why this finding is scoped to specific surfaces rather than the full M365 suite. I'll get into where the boundary sits for each resource type below.</p>
+
+<h2 id="sharepoint">SharePoint and OneDrive</h2>
+
+<p>This is the strongest and most concrete scenario.</p>
+
+<p>The Claude M365 connector requests <code>Sites.Read.All</code> and <code>Files.Read.All</code> as delegated permissions. The Security Guide itself notes that "site-specific permissioning (using *.Selected permissions) is not supported because the underlying search is tenant-wide."</p>
+
+<p>SharePoint Administrators and Global Administrators have the ability to access all site collections through administrative override paths. This isn't the same as having site ACL membership by default. What it means in practice is that SharePoint-backed Graph APIs honour those override paths when evaluating access under a delegated token. The causal chain is specific: the delegated token carries the user's identity and role assignments, SharePoint evaluates those roles through admin override paths rather than standard ACL membership, and Graph returns results consistent with that elevated access. The connector doesn't do anything special here. It's a standard delegated call, and the admin's role does the rest.</p>
+
+<p>Under the intersection model:</p>
+
+<ul>
+  <li><strong>Standard user</strong> authenticates the connector with <code>Sites.Read.All</code>   can search and read documents from SharePoint sites they have access to and their own OneDrive</li>
+  <li><strong>SharePoint Admin / Global Admin</strong> authenticates the connector with <code>Sites.Read.All</code>   can search and read documents from <strong>SharePoint sites and OneDrive-backed personal sites accessible via administrative override paths</strong>, which in most tenant configurations covers the full tenant</li>
+</ul>
+
+<p>Those two bullets have identical scopes. The access they produce is not the same. That's the finding.</p>
+
+<h2 id="exchange">Why Exchange Behaves Differently</h2>
+
+<p>Being precise about scope here matters, and I want to spend time on it because the Exchange claim is where a lot of AI security writing overstates the finding. The strongest case here is SharePoint-specific, and claiming Exchange behaves the same way would be wrong.</p>
+
+<p>Exchange-governed resources tell a different story. The Exchange Administrator Entra ID role maps to the Organization Management role group in Exchange Online. This role grants administrative management capabilities but does <strong>not</strong> include implicit Full Access to mailbox content. Microsoft's documentation for Organization Management states that members of this role group can't perform mailbox searches by default.</p>
+
+<p>So a Global Administrator or Exchange Administrator authenticating the connector with <code>Mail.Read</code> can't read another user's mailbox through the Graph API. Accessing another user's mail via delegated permissions requires either application-level permissions or explicit Exchange Online mailbox delegation granted via <code>Add-MailboxPermission</code>. The connector reflects what the user can access. For Exchange, that boundary holds.</p>
+
+<h2 id="teams">Teams, Partially</h2>
+
+<p>Under the intersection model, a Teams Administrator's broader role permissions mean that <code>ChannelMessage.Read.All</code> delegated access likely extends to standard and shared channels across teams they don't belong to. This is less clearly documented than the SharePoint case and worth treating as provisional in your environment.</p>
+
+<p>Private channels enforce a harder boundary. Teams Admins attempting to list private channel messages for channels they aren't members of receive a 403 Forbidden error. Anthropic's own connector documentation aligns with this: "If you're a member of a private channel, Claude can search for that content. If you're not a member, Claude can't access it."</p>
+
+<p>The <code>Chat.Read</code> scope shows minimal expansion with admin roles, as chat APIs are generally scoped to the signed-in user's own conversations.</p>
+
+<h2 id="scope-summary">Per-Scope Summary</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Scope</th>
+      <th scope="col">Standard User</th>
+      <th scope="col">SharePoint Admin</th>
+      <th scope="col">Exchange Admin</th>
+      <th scope="col">Teams Admin</th>
+      <th scope="col">Global Admin</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Files.Read.All</code></td><td>Own accessible files</td><td>All files tenant-wide</td><td>No change</td><td>No change</td><td>All files tenant-wide</td></tr>
+    <tr><td><code>Sites.Read.All</code></td><td>Accessible sites only</td><td>All sites tenant-wide</td><td>No change</td><td>No change</td><td>All sites tenant-wide</td></tr>
+    <tr><td><code>Mail.Read</code></td><td>Own mailbox</td><td>No change</td><td>No direct expansion</td><td>No change</td><td>No direct expansion</td></tr>
+    <tr><td><code>Mail.Read.Shared</code></td><td>Shared/delegated mailboxes</td><td>No change</td><td>No direct expansion</td><td>No change</td><td>No direct expansion</td></tr>
+    <tr><td><code>Calendars.Read</code></td><td>Own calendars</td><td>No change</td><td>No direct expansion</td><td>No change</td><td>No direct expansion</td></tr>
+    <tr><td><code>ChannelMessage.Read.All</code></td><td>Member channels only</td><td>No change</td><td>No change</td><td>Likely expanded (provisional)</td><td>Likely expanded (provisional)</td></tr>
+    <tr><td><code>Chat.Read</code></td><td>Own chats</td><td>No change</td><td>No change</td><td>Minimal change</td><td>Minimal change</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="documentation-gap">The Documentation Gap</h2>
+
+<p>The connector is working exactly as designed. Microsoft's intersection model is documented, intentional, and well-understood by identity security teams. What I'm describing isn't code behaving incorrectly. It's a documentation gap with real deployment consequences.</p>
+
+<p>The Security Guide's statement that "Users cannot access other users' private files or emails" is unqualified. It doesn't distinguish between standard licensed users and those holding SharePoint Administrator or Global Administrator roles. A CISO reading that statement during a procurement evaluation could reasonably conclude the connector is safe for all user populations without additional controls, and the Security Guide gives them no signal otherwise.</p>
+
+<p>There's a framing that comes up as pushback: "Admins already had that access, so the connector is just reflecting it." That's true at the permission layer. It misses what the connector actually changes, which I'll describe in the next section.</p>
+
+<h2 id="usability-escalation">Usability Escalation</h2>
+
+<p>What's happening here is effectively usability escalation. The connector doesn't introduce new access paths. It operationalizes existing ones, collapsing the effort required to exercise them from deliberate multi-step administrative action to a conversational prompt.</p>
+
+<p>The part that changes most concretely is the audit trail, and this is the piece I'd want any detection engineer reading this to focus on. The same action produces meaningfully different telemetry depending on which tool an admin uses to perform it:</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Access method</th>
+      <th scope="col">Log signal</th>
+      <th scope="col">Intent visibility</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>eDiscovery</td><td>High: case context, search query, custodian scope</td><td>High</td></tr>
+    <tr><td>PowerShell</td><td>Medium: cmdlets visible, admin session context present</td><td>Medium</td></tr>
+    <tr><td>Claude connector</td><td>Low: Graph API call from service principal only</td><td>Low</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>When an admin reads another user's files through SharePoint admin tools or initiates eDiscovery workflows, the tooling appears in audit logs with administrative context that signals intent. When the same access happens through a Claude conversation, it shows up as a Graph API call from the connector's service principal. Without specific custom detection rules, a Global Admin reading another user's private files through Claude looks identical in logs to a standard user performing a routine search. That's the detection gap worth building a rule for, and I'll put the specific query in the recommendations section below.</p>
+
+<p>The insider threat surface expands for a simpler reason. The friction was the control. An admin who wanted to read another user's files had to open PowerShell, navigate admin portals, or initiate a formal workflow. Most never did, not because they couldn't, but because the effort wasn't proportionate to casual curiosity. A conversational prompt removes that entirely.</p>
+
+<p>The risk model implication follows from both of those: most enterprise assessments for admin accounts assume cross-user data access requires deliberate action. It no longer does.</p>
+
+<h2 id="permission-discovery">The Permission Discovery Problem</h2>
+
+<p>The admin account scenario is the sharpest edge of this finding, but not the only one. The same connector dynamic applies to standard users, through a different mechanism.</p>
+
+<p>SharePoint sites are routinely overshared. Users accumulate access to sites and document libraries over years of project work, team changes, and group-inherited permissions. Most of this access is never exercised because the users don't know the sites exist. Before AI connectors, latent over-permission was inert. Nobody stumbled across sensitive files in a site they didn't know they had access to through normal working patterns.</p>
+
+<p>A tenant-wide AI search changes that. Claude will surface content from every SharePoint site the authenticated user has permission to read, including sites they've never visited, document libraries they didn't know existed, and files shared through group membership they've long forgotten. The connector doesn't create the oversharing problem. It makes every existing permission mistake immediately discoverable.</p>
+
+<p>Treating this as a post-rollout cleanup task is a mistake. Once the connector is live, the discovery surface is active.</p>
+
+<h2 id="broader-pattern">The Pattern Is Broader Than This Connector</h2>
+
+<p>This post focuses on the Claude M365 connector because that's the specific system I tested and disclosed against. The behavior itself isn't Anthropic-specific. Any system that uses delegated permissions to access M365 or similar enterprise platforms inherits the same dynamics if three conditions hold: effective access reflects the signed-in user's role, the interface is low-friction and search-driven, and the audit context produced is weaker than what legacy admin tooling generates for equivalent access. Claude's M365 connector satisfies all three. So does Microsoft Copilot. So will most AI assistants with enterprise data connectors built on Graph or similar delegated APIs.</p>
+
+<p>The practical question for any AI assistant evaluation isn't just "what data can it read?" It's "what happens to that access when a privileged account authenticates it?", "what does the audit trail look like compared to the tools it replaces?", and "does the documentation tell the whole story?" The Claude connector is a concrete instance of a pattern that will repeat.</p>
+
+<h2 id="anthropics-response">Anthropic's Response</h2>
+
+<p>I reported this finding on April 8, 2026, via email to disclosure@anthropic.com and through Anthropic's HackerOne VDP (Report #3657431). The core of their response (paraphrased):</p>
+
+<blockquote>
+  <p>The Microsoft 365 Connector uses delegated permissions, and users can only access Microsoft 365 data they already have permission for. An account holding a privileged Entra ID administrative role already has access to other users' data via Microsoft's permission model, so the connector reflecting that access is consistent with how delegated permissions work, not a gap in the connector.</p>
+</blockquote>
+
+<p>That's a technically defensible position. The connector is behaving as designed. The question was never whether the connector is broken. It was whether the documentation accurately communicates the design to the people making deployment decisions.</p>
+
+<h2 id="recommendations">What I'd Recommend</h2>
+
+<p><strong>1. Block privileged accounts from authenticating the connector</strong></p>
+
+<p>The connector has no built-in mechanism to distinguish a Global Admin session from a standard user session. The fix is two-layered: restrict the connector's enterprise app to a security group of standard user accounts via Enterprise App Assignment Required, then back that up with a Conditional Access policy targeting the MCP Client and M365 Connector service principals for accounts holding admin roles. One important nuance: Conditional Access evaluates at authentication time only and does not constrain downstream Graph query behaviour once a token is issued. This means CA alone is insufficient. The Enterprise App assignment is the primary control. The CA policy enforces it at the authentication layer so it can't be bypassed by direct OAuth flows. If SharePoint access isn't needed for the use case, revoking <code>Sites.Read.All</code> and <code>Files.Read.All</code> eliminates the expansion path at the scope level entirely.</p>
+
+<p><strong>2. Layer Purview DLP as a backstop, not a primary control</strong></p>
+
+<p>DLP policies operate at the content level, not the identity level. That distinction matters: DLP works even if a privileged account authenticates the connector, and it covers the oversharing scenario for standard users surfacing content they have access to but shouldn't be reading through an AI interface. Configure information type policies for SSNs, financial records, and health data. This is defense-in-depth, not a substitute for the identity-layer restrictions above.</p>
+
+<p><strong>3. Audit SharePoint permissions before rollout</strong></p>
+
+<p>AI-powered tenant-wide search will surface every permission mistake in your environment immediately. Sites overshared years ago and never cleaned up become discoverable through Claude the day the connector goes live. Run a SharePoint access governance report and remediate orphaned permissions and over-scoped group memberships before rollout. Treating this as a parallel track rather than a prerequisite is how organisations end up with an unplanned disclosure event.</p>
+
+<p><strong>4. Monitor connector sign-ins from privileged roles</strong></p>
+
+<p>When a privileged account authenticates the connector, the event appears in Entra sign-in logs. The Graph API calls that follow show up attributed to the connector's service principal without the contextual fingerprint that would appear if the same admin had used PowerShell or eDiscovery tooling. Detecting the authentication event is the cleaner signal. The following Sentinel query surfaces sign-ins to the MCP service principals from accounts holding admin roles:</p>
+
+<pre><code>let PrivilegedUsers = IdentityInfo
+    | where AssignedRoles has_any (
+        "Global Administrator",
+        "SharePoint Administrator",
+        "Exchange Administrator",
+        "Teams Administrator"
+    )
+    | project AccountUPN;
+SigninLogs
+| where AppId in ("&lt;MCP_CLIENT_APP_ID&gt;", "&lt;M365_CONNECTOR_APP_ID&gt;")
+| where UserPrincipalName in~ (PrivilegedUsers)
+| project TimeGenerated, UserPrincipalName, AppDisplayName,
+          IPAddress, ResultType, ConditionalAccessStatus
+| order by TimeGenerated desc</code></pre>
+
+<p>Replace the app ID placeholders with the actual service principal IDs from your tenant, visible in Entra under Enterprise Applications. Note that <code>IdentityInfo</code> requires Sentinel UEBA to be enabled via the Microsoft Defender for Identity or Entra ID connector. Without it the table is empty and the query returns no results.</p>
+
+<p><strong>5. Evaluate Restricted SharePoint Search and Restricted Content Discovery</strong></p>
+
+<p>Microsoft built both controls because Copilot was surfacing overshared SharePoint content. Restricted SharePoint Search limits AI tools to a curated allow-list of up to 100 sites. Restricted Content Discovery is a per-site control that prevents content from appearing in AI and organisation-wide search results at the search index level. Three caveats: Microsoft describes Restricted SharePoint Search as a temporary measure, not a permanent security boundary. Both features were designed for Copilot. Restricted Content Discovery also requires SharePoint Advanced Management licensing beyond standard M365. Validate applicability to Claude in your environment before relying on either as a control.</p>
+
+<div class="references">
+  <h2>References</h2>
+  <ol>
+    <li><a href="https://learn.microsoft.com/en-us/graph/permissions-overview" target="_blank" rel="noopener noreferrer">Microsoft Graph permissions overview</a>   intersection model documentation</li>
+    <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/permissions-consent-overview" target="_blank" rel="noopener noreferrer">Microsoft identity platform permissions and consent overview</a>   delegated vs application permissions, RBAC interaction</li>
+    <li><a href="https://support.claude.com/en/articles/12684923-microsoft-365-connector-security-guide" target="_blank" rel="noopener noreferrer">Claude M365 Connector Security Guide</a>   Anthropic's published security documentation</li>
+    <li><a href="https://learn.microsoft.com/en-us/sharepoint/restricted-sharepoint-search" target="_blank" rel="noopener noreferrer">Restricted SharePoint Search</a>   Microsoft's allow-list approach to limiting AI search scope</li>
+    <li><a href="https://learn.microsoft.com/en-us/sharepoint/restricted-content-discovery" target="_blank" rel="noopener noreferrer">Restricted Content Discovery in SharePoint</a>   per-site control for preventing AI content surfacing</li>
+  </ol>
+</div>
+
+<p class="bio">Amardip Deshpande is a cloud security researcher focused on AI security, cloud identity, and enterprise integration risk. He writes at <a href="https://ad-cloud-sec.github.io">ad-cloud-sec.github.io</a>.</p>
+
+</section>
+</article>
+</main>
+
+<footer>
+  <span>ad-cloud-sec.github.io</span>
+  <a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank" rel="noopener noreferrer">LinkedIn →</a>
+</footer>
+
+</body>
+</html>

@@ -41,33 +41,21 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: #0f1117 !important; color-scheme: dark; }
   body { background: var(--page); color: var(--ink); font-family: 'Inter', system-ui, sans-serif; font-size: 18px; line-height: 1.75; font-weight: 300; }
-
-  /* Nav */
   nav { border-bottom: 1px solid var(--rule); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; max-width: 1000px; margin: 0 auto; }
   .nav-logo { font-family: 'Fira Code', monospace; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
   .nav-links { display: flex; gap: 32px; list-style: none; }
   .nav-links a { font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); text-decoration: none; transition: color 0.15s; }
   .nav-links a:hover { color: var(--accent); }
   .nav-links .nav-accent { color: var(--accent); }
-
-  /* Hero */
   .hero { max-width: 1000px; margin: 0 auto; padding: 72px 40px 64px; border-bottom: 1px solid var(--rule); }
   .hero-top { display: flex; align-items: flex-start; gap: 24px; margin-bottom: 32px; }
-  .avatar {
-    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
-    background: #151822; border: 1px solid var(--rule);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Fira Code', monospace; font-size: 14px; font-weight: 500;
-    color: var(--accent); letter-spacing: 0.05em; margin-top: 4px;
-  }
+  .avatar { width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; background: #151822; border: 1px solid var(--rule); display: flex; align-items: center; justify-content: center; font-family: 'Fira Code', monospace; font-size: 14px; font-weight: 500; color: var(--accent); letter-spacing: 0.05em; margin-top: 4px; }
   .hero-kicker { font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
   .hero-name { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 15px; font-weight: 500; color: var(--ink-light); letter-spacing: 0.02em; margin-bottom: 0; }
   .hero h1 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: clamp(30px, 5vw, 52px); font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; color: var(--ink); max-width: 780px; margin-bottom: 24px; }
   .hero-bio { max-width: 580px; font-size: 17px; color: var(--ink-light); font-weight: 300; line-height: 1.75; margin-bottom: 36px; }
   .hero-tags { display: flex; flex-wrap: wrap; gap: 10px; }
   .tag { font-family: 'Fira Code', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; background: #1a1d27; border: 1px solid var(--rule); color: var(--ink-muted); padding: 5px 12px; }
-
-  /* Intel section */
   .intel { max-width: 1000px; margin: 0 auto; padding: 48px 40px; border-bottom: 1px solid var(--rule); }
   .intel-inner { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center; }
   .intel-live { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
@@ -82,8 +70,6 @@
   .intel-chip { font-family: 'Fira Code', monospace; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); background: #1a1d27; border: 1px solid var(--rule); padding: 3px 10px; }
   .intel-cta { display: inline-flex; align-items: center; gap: 6px; font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(56,178,172,.35); padding: 10px 22px; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
   .intel-cta:hover { background: rgba(56,178,172,.07); border-color: var(--accent); }
-
-  /* Writing */
   .writing { max-width: 1000px; margin: 0 auto; padding: 56px 40px 80px; }
   .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 40px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
   .section-label { font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-muted); }
@@ -97,8 +83,6 @@
   .post-title { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 22px; font-weight: 700; line-height: 1.3; color: var(--ink); margin-bottom: 10px; }
   .post-excerpt { font-size: 16px; color: var(--ink-light); font-weight: 300; line-height: 1.6; max-width: 560px; }
   .post-read { display: inline-block; margin-top: 14px; font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--accent); padding-bottom: 1px; }
-
-  /* About */
   .about { background: #0c0e14; border-top: 1px solid var(--rule); padding: 56px 40px; }
   .about-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
   .about h2 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 20px; color: var(--ink); }
@@ -106,15 +90,11 @@
   .about-stack { display: flex; flex-direction: column; gap: 12px; }
   .stack-item { display: flex; align-items: center; gap: 12px; font-family: 'Fira Code', monospace; font-size: 12px; color: var(--ink-muted); }
   .stack-dot { width: 6px; height: 6px; background: var(--accent); flex-shrink: 0; }
-
-  /* Footer */
   footer { border-top: 1px solid var(--rule); padding: 24px 40px; max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
   .footer-left { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); letter-spacing: 0.06em; }
   .footer-links { display: flex; gap: 24px; }
   footer a { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); text-decoration: none; letter-spacing: 0.06em; transition: color 0.15s; }
   footer a:hover { color: var(--accent); }
-
-  /* Responsive */
   @media (max-width: 700px) {
     nav, .hero, .writing, .intel, footer { padding-left: 20px; padding-right: 20px; }
     .about { padding: 40px 20px; }
@@ -130,7 +110,6 @@
 </style>
 </head>
 <body>
-
 <header>
 <nav>
   <a href="/" class="nav-logo">AD · Cloud Security</a>
@@ -143,7 +122,6 @@
   </ul>
 </nav>
 </header>
-
 <main>
 <section class="hero">
   <div class="hero-top">
@@ -167,7 +145,6 @@
     <span class="tag">AWS · Azure · GCP</span>
   </div>
 </section>
-
 <section class="intel">
   <div class="intel-inner">
     <div>
@@ -191,14 +168,21 @@
     <a href="/dashboard.html" class="intel-cta">View Dashboard →</a>
   </div>
 </section>
-
 <section class="writing">
   <div class="section-header">
     <span class="section-label">Writing</span>
     <span class="section-note">New posts monthly</span>
   </div>
   <div class="post-list">
-
+    <a href="posts/privileged-accounts-claude-m365-connector.html" class="post-item">
+      <div class="post-date">Apr 2026</div>
+      <div class="post-content">
+        <div class="post-category">AI Security · Microsoft 365 · Entra ID · Delegated Permissions</div>
+        <div class="post-title">Privileged Accounts and the Claude M365 Connector: Why "User-Scoped" Has Limits Anthropic Didn't Document</div>
+        <div class="post-excerpt">Anthropic's Security Guide promises user-scoped access. Under Microsoft's intersection model, a SharePoint Admin authenticating the connector gets access through administrative override paths covering the full tenant. The documentation doesn't mention this. Independent deployment guidance, disclosure timeline, and a Sentinel detection query included.</div>
+        <span class="post-read">Read →</span>
+      </div>
+    </a>
     <a href="posts/claude-m365-secure-integration-controls.html" class="post-item">
       <div class="post-date">Mar 2026</div>
       <div class="post-content">
@@ -208,7 +192,6 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
-
     <a href="posts/insider-threat-detection-sentinel.html" class="post-item">
       <div class="post-date">Feb 2026</div>
       <div class="post-content">
@@ -218,7 +201,6 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
-
     <a href="posts/email-mitm-investigation.html" class="post-item">
       <div class="post-date">Feb 2026</div>
       <div class="post-content">
@@ -228,10 +210,8 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
-
   </div>
 </section>
-
 <section class="about" id="about">
   <div class="about-inner">
     <div>
@@ -252,9 +232,7 @@
     </div>
   </div>
 </section>
-
 </main>
-
 <footer>
   <span class="footer-left">ad-cloud-sec.github.io</span>
   <div class="footer-links">
@@ -262,6 +240,5 @@
     <a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank" rel="noopener noreferrer">LinkedIn →</a>
   </div>
 </footer>
-
 </body>
 </html>

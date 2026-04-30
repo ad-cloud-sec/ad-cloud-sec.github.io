@@ -78,11 +78,13 @@
   .post-item { display: grid; grid-template-columns: 100px 1fr; gap: 32px; padding: 36px 0; border-bottom: 1px solid var(--rule); text-decoration: none; color: inherit; transition: opacity 0.2s; }
   .post-item:hover { opacity: 0.75; }
   .post-item:first-child { padding-top: 0; }
+  .post-item.post-new { position: relative; }
   .post-date { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-muted); padding-top: 6px; white-space: nowrap; }
   .post-category { font-family: 'Fira Code', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
   .post-title { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 22px; font-weight: 700; line-height: 1.3; color: var(--ink); margin-bottom: 10px; }
   .post-excerpt { font-size: 16px; color: var(--ink-light); font-weight: 300; line-height: 1.6; max-width: 560px; }
   .post-read { display: inline-block; margin-top: 14px; font-family: 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--accent); padding-bottom: 1px; }
+  .new-badge { display: inline-block; font-family: 'Fira Code', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; background: var(--accent); color: #0f1117; padding: 2px 7px; margin-left: 10px; vertical-align: middle; position: relative; top: -1px; }
   .about { background: #0c0e14; border-top: 1px solid var(--rule); padding: 56px 40px; }
   .about-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
   .about h2 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 20px; color: var(--ink); }
@@ -132,7 +134,7 @@
     </div>
   </div>
   <h1>Security research from the practitioner's perspective.</h1>
-  <p class="hero-bio">I investigate incidents that shouldn't have happened and build detections for the ones that will. A decade in cloud security across AWS, Azure, and GCP — currently focused on AI security threats and the architectural gaps that CNAPP tools keep shipping around.</p>
+  <p class="hero-bio">I investigate incidents that shouldn't have happened and build detections for the ones that will. A decade in cloud security across AWS, Azure, and GCP, currently focused on AI security threats and the architectural gaps that CNAPP tools keep shipping around.</p>
   <div class="hero-tags">
     <span class="tag">AI Security</span>
     <span class="tag">CNAPP</span>
@@ -171,9 +173,20 @@
 <section class="writing">
   <div class="section-header">
     <span class="section-label">Writing</span>
-    <span class="section-note">New posts monthly</span>
+
   </div>
   <div class="post-list">
+
+    <a href="posts/claude-compliance-sentinel.html" class="post-item post-new">
+      <div class="post-date">Apr 2026</div>
+      <div class="post-content">
+        <div class="post-category">AI Security · Azure Sentinel · Compliance · Detection Engineering · SIEM</div>
+        <div class="post-title">How to Stream Claude Compliance Logs into Microsoft Sentinel<span class="new-badge">New</span></div>
+        <div class="post-excerpt">No built-in connector exists. This post covers the full Logic App pipeline, the permissive JSON schema that keeps it from breaking on spec updates, and five KQL detection queries for roles, API keys, and org settings. Built from the API spec, Rev J.</div>
+        <span class="post-read">Read →</span>
+      </div>
+    </a>
+
     <a href="posts/privileged-accounts-claude-m365-connector.html" class="post-item">
       <div class="post-date">Apr 2026</div>
       <div class="post-content">
@@ -183,6 +196,7 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
+
     <a href="posts/claude-m365-secure-integration-controls.html" class="post-item">
       <div class="post-date">Mar 2026</div>
       <div class="post-content">
@@ -192,15 +206,17 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
+
     <a href="posts/insider-threat-detection-sentinel.html" class="post-item">
       <div class="post-date">Feb 2026</div>
       <div class="post-content">
         <div class="post-category">Detection Engineering · Microsoft Sentinel · Insider Threat</div>
         <div class="post-title">Building an Insider Threat Detection Program for Employee Offboarding in Microsoft Sentinel</div>
-        <div class="post-excerpt">Dynamic watchlist, ten KQL analytics rules covering every exfiltration and persistence path, alert fusion, monitoring workbook, and RBAC isolation — a complete detection program for the offboarding risk window.</div>
+        <div class="post-excerpt">Dynamic watchlist, ten KQL analytics rules covering every exfiltration and persistence path, alert fusion, monitoring workbook, and RBAC isolation: a complete detection program for the offboarding risk window.</div>
         <span class="post-read">Read →</span>
       </div>
     </a>
+
     <a href="posts/email-mitm-investigation.html" class="post-item">
       <div class="post-date">Feb 2026</div>
       <div class="post-content">
@@ -210,13 +226,14 @@
         <span class="post-read">Read →</span>
       </div>
     </a>
+
   </div>
 </section>
 <section class="about" id="about">
   <div class="about-inner">
     <div>
       <h2>About</h2>
-      <p>Cloud security engineer with 10 years of experience across CNAPP, CSPM, CIEM, CWPP, and KSPM. Previously built detection systems at scale — over 2,500 rules across CIS, NIST, MITRE ATT&amp;CK, PCI DSS, and GDPR across AWS, Azure, and GCP.</p>
+      <p>Cloud security engineer with 10 years of experience across CNAPP, CSPM, CIEM, CWPP, and KSPM. Previously built detection systems at scale, over 2,500 rules across CIS, NIST, MITRE ATT&amp;CK, PCI DSS, and GDPR across AWS, Azure, and GCP.</p>
       <br>
       <p>Currently focused on AI security, cloud security posture, and detection engineering. Writing about real incidents, real detections, and the architectural gaps that make both possible.</p>
     </div>

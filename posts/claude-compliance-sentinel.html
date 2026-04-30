@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Stream Claude Compliance Logs into Microsoft Sentinel</title>
+
+<meta name="description" content="Logic App pipeline, permissive JSON schema, and five KQL detection queries for Claude Enterprise compliance logs in Microsoft Sentinel. Built from the API spec, Rev J.">
+<link rel="canonical" href="https://ad-cloud-sec.github.io/posts/claude-compliance-sentinel.html">
+<meta property="og:title" content="How to Stream Claude Compliance Logs into Microsoft Sentinel">
+<meta property="og:description" content="Logic App pipeline, permissive JSON schema, and five KQL detection queries for Claude Enterprise compliance logs in Microsoft Sentinel.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ad-cloud-sec.github.io/posts/claude-compliance-sentinel.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How to Stream Claude Compliance Logs into Microsoft Sentinel">
+<meta name="twitter:description" content="Logic App pipeline, permissive JSON schema, and five KQL detection queries for Claude Enterprise compliance logs in Microsoft Sentinel.">
+<meta name="twitter:label1" content="Reading time">
+<meta name="twitter:data1" content="14 minutes">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "How to Stream Claude Compliance Logs into Microsoft Sentinel",
+  "description": "Logic App pipeline, permissive JSON schema, and five KQL detection queries for Claude Enterprise compliance logs in Microsoft Sentinel. Built from the API spec, Rev J.",
+  "author": {"@type": "Person", "name": "Amardip Deshpande", "url": "https://ad-cloud-sec.github.io"},
+  "datePublished": "2026-04-25",
+  "dateModified": "2026-04-25",
+  "publisher": {"@type": "Organization", "name": "AD Cloud Security", "url": "https://ad-cloud-sec.github.io"},
+  "url": "https://ad-cloud-sec.github.io/posts/claude-compliance-sentinel.html",
+  "keywords": ["claude", "anthropic", "microsoft sentinel", "azure", "compliance api", "siem", "detection engineering", "kql", "logic app"]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --ink:        #e8e2d9;
+  --ink-light:  #a89f8c;
+  --ink-muted:  #6b6457;
+  --rule:       #1e2130;
+  --code-bg:    #0c0e14;
+  --code-border:#1e2130;
+  --accent:     #38b2ac;
+  --page:       #0f1117;
+}
+
+html, body {
+  background: #0f1117 !important;
+  color-scheme: dark;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.site-nav {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+}
+
+.site-nav .logo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+
+.site-nav a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: color 0.15s;
+}
+
+.site-nav a:hover { color: var(--accent); }
+
+.page {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 80px 40px 120px;
+}
+
+.masthead {
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 32px 0 28px;
+  margin-bottom: 56px;
+}
+
+.kicker {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 900;
+  font-size: clamp(28px, 5vw, 42px);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 20px;
+  line-height: 1.15;
+}
+
+.deck {
+  font-family: 'Inter', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--ink-light);
+  font-style: italic;
+  border-left: 2px solid var(--accent);
+  padding-left: 16px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 10px;
+  margin: 56px 0 16px;
+}
+
+h3 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  margin: 36px 0 12px;
+}
+
+p { margin: 0 0 20px; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+strong { font-weight: 600; color: var(--ink); }
+
+ul, ol { margin: 0 0 20px; padding-left: 24px; }
+li { margin-bottom: 8px; }
+
+code {
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  background: var(--code-bg);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--ink-muted);
+  border-radius: 0 4px 4px 0;
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 24px 0;
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.65;
+}
+
+.callout {
+  border-left: 3px solid var(--accent);
+  margin: 32px 0;
+  padding: 16px 20px;
+  background: #1a1d27;
+}
+
+.callout p:last-child { margin-bottom: 0; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 28px;
+}
+
+th {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-light);
+  font-size: 15px;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+td code { font-size: 12px; }
+
+.pipeline {
+  background: #0f1117;
+  padding: 32px 20px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  margin: 0 0 28px;
+}
+
+footer {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 40px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+footer span {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.06em;
+}
+
+footer a {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  letter-spacing: 0.06em;
+}
+
+footer a:hover { color: var(--accent); }
+
+hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 48px 0;
+}
+
+.query-block { margin: 24px 0; }
+
+.query-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--ink-muted);
+  padding: 10px 16px;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  color: var(--ink-muted);
+  letter-spacing: 0.05em;
+}
+
+.query-toggle:hover {
+  color: var(--ink);
+  border-left-color: var(--accent);
+}
+
+.query-toggle .toggle-arrow {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+  color: var(--accent);
+}
+
+.query-content { display: none; }
+.query-content.open { display: block; }
+.query-content pre { margin-top: 0; border-top: none; }
+
+@media (max-width: 600px) {
+  .site-nav { padding: 16px 20px; }
+  .page { padding: 40px 20px 80px; }
+  table { font-size: 13px; }
+  th, td { padding: 8px 6px; }
+  .pipeline { padding: 16px 8px; }
+  pre { font-size: 12px; padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav" aria-label="Main navigation">
+  <a href="/" class="logo">AD · Cloud Security</a>
+  <a href="/" aria-label="Back to all posts">← All Posts</a>
+</nav>
+
+<main class="page">
+<article>
+
+<header class="masthead">
+  <div class="kicker">AI Security · Azure Sentinel · Compliance · Detection Engineering · SIEM</div>
+  <h1>How to Stream Claude Compliance Logs into Microsoft Sentinel</h1>
+  <p class="deck">Enterprise-only, no built-in Sentinel connector. This post covers the full Logic App pipeline, the permissive schema that keeps it from breaking on spec updates, and five KQL detection queries for roles, API keys, and org settings.</p>
+</header>
+
+<section>
+
+<p>The Compliance API is available to Claude Enterprise plans and is documented at <a href="https://support.claude.com/en/articles/13015708-access-the-compliance-api" target="_blank" rel="noopener noreferrer">support.claude.com</a>. The full technical spec is a PDF download linked from that article. No Sentinel connector exists. The endpoint is live and the data is useful, but the path from API key to working detection query is entirely on you.</p>
+
+<div class="callout">
+  <p><strong>Enterprise plan only.</strong> The Compliance API is not available on Pro or Teams. Public Sector organizations are also excluded. If you are not on Enterprise, the API key creation option will not appear in your organization settings.</p>
+</div>
+
+<p>This is the build I worked through. Every decision, every schema trap, every RBAC elevation you need to plan upfront. It is based on Rev J (API Version 2026-04-20) and covers the Activity Feed endpoint specifically.</p>
+
+<hr>
+
+<h2 id="what-the-activity-feed-covers">What the Activity Feed actually covers</h2>
+
+<p>The Activity Feed gives you programmatic access to 260+ activity types across 33 categories: Authentication, Chats, Files, Projects, Customizations (Skills, Commands, Plugins), Integrations, MCP Servers, Organization Settings, Billing, SSO and Directory Sync, SCIM Provisioning, Claude Code, Roles, Groups, GitHub Enterprise, and more. The spec maps 135 of 172 audit log events to compliance activities, with additional types that have no audit log equivalent.</p>
+
+<p>Each activity type carries its own <code>additional_fields</code> shape. The feed is polymorphic. Activities are queryable up to a minute after they occur and retained for six years.</p>
+
+<p>Three things the Activity Feed does not cover are worth calling out explicitly, because none of them are obvious from the spec.</p>
+
+<p><strong>Conversation content.</strong> Prompts and model responses do not flow through the Activity Feed. The broader Compliance API does expose content retrieval via separate endpoints (chat messages, file downloads, artifact content, project documents) under the <code>read:compliance_user_data</code> scope. That is a separate build.</p>
+
+<p><strong>Cowork session-level activity.</strong> Admin events are logged: <code>org_cowork_enabled</code>, <code>org_cowork_disabled</code>, <code>org_cowork_agent_enabled</code>, <code>org_cowork_agent_disabled</code>. Actions taken inside a Cowork session are not. The spec does not say this. I confirmed it through observed behavior.</p>
+
+<p><strong>Pre-enablement activity.</strong> Logging starts the moment the API is enabled. There is no backfill. The spec does not state this either. Same source.</p>
+
+<hr>
+
+<h2 id="architecture">Architecture</h2>
+
+<div class="pipeline">
+<svg width="100%" viewBox="0 0 640 230" style="display:block;overflow:visible" role="img" aria-label="Five-stage pipeline diagram">
+  <title>Claude Compliance API to Sentinel pipeline</title>
+  <desc>Five stages: Compliance API feeds Logic App, which feeds Parse JSON, which feeds Log Analytics Data Collector, which feeds Microsoft Sentinel.</desc>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#38b2ac" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Box 1: Compliance API (source) -->
+  <rect x="10" y="20" width="150" height="56" rx="6" fill="#1a1d27" stroke="#38b2ac" stroke-width="1"/>
+  <text x="85" y="41" text-anchor="middle" dominant-baseline="central" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="500" fill="#e8e2d9">Compliance API</text>
+  <text x="85" y="57" text-anchor="middle" dominant-baseline="central" font-family="'Fira Code',monospace" font-size="11" fill="#6b6457">Activity Feed</text>
+
+  <!-- Arrow 1 to 2 -->
+  <line x1="161" y1="48" x2="219" y2="48" stroke="#38b2ac" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- Box 2: Logic App -->
+  <rect x="220" y="20" width="150" height="56" rx="6" fill="#1a1d27" stroke="#1e2130" stroke-width="1"/>
+  <text x="295" y="41" text-anchor="middle" dominant-baseline="central" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="500" fill="#e8e2d9">Logic App</text>
+  <text x="295" y="57" text-anchor="middle" dominant-baseline="central" font-family="'Inter',sans-serif" font-size="11" fill="#6b6457">15-min recurrence</text>
+
+  <!-- Arrow 2 to 3 -->
+  <line x1="371" y1="48" x2="429" y2="48" stroke="#38b2ac" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- Box 3: Parse JSON -->
+  <rect x="430" y="20" width="150" height="56" rx="6" fill="#1a1d27" stroke="#1e2130" stroke-width="1"/>
+  <text x="505" y="41" text-anchor="middle" dominant-baseline="central" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="500" fill="#e8e2d9">Parse JSON</text>
+  <text x="505" y="57" text-anchor="middle" dominant-baseline="central" font-family="'Inter',sans-serif" font-size="11" fill="#6b6457">permissive schema</text>
+
+  <!-- Vertical arrow 3 to 4 -->
+  <line x1="505" y1="77" x2="505" y2="149" stroke="#38b2ac" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- Box 4: Log Analytics -->
+  <rect x="430" y="150" width="150" height="56" rx="6" fill="#1a1d27" stroke="#1e2130" stroke-width="1"/>
+  <text x="505" y="171" text-anchor="middle" dominant-baseline="central" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="500" fill="#e8e2d9">Log Analytics</text>
+  <text x="505" y="186" text-anchor="middle" dominant-baseline="central" font-family="'Inter',sans-serif" font-size="11" fill="#6b6457">HTTP POST to workspace</text>
+
+  <!-- Arrow 4 to 5 leftward -->
+  <line x1="429" y1="178" x2="371" y2="178" stroke="#38b2ac" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- Box 5: Sentinel (destination) -->
+  <rect x="220" y="150" width="150" height="56" rx="6" fill="#1a1d27" stroke="#38b2ac" stroke-width="1"/>
+  <text x="295" y="171" text-anchor="middle" dominant-baseline="central" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="500" fill="#e8e2d9">Sentinel</text>
+  <text x="295" y="185" text-anchor="middle" dominant-baseline="central" font-family="'Fira Code',monospace" font-size="10" fill="#38b2ac">ClaudeCompliance</text>
+  <text x="295" y="197" text-anchor="middle" dominant-baseline="central" font-family="'Fira Code',monospace" font-size="10" fill="#38b2ac">Logs_CL</text>
+</svg>
+</div>
+
+<p>Logic App Consumption (Multi-tenant) is the right fit here. One HTTP GET and one Log Analytics POST every 15 minutes. Pay-per-execution pricing, no infrastructure to manage. If you later need complex transformation logic, tighter retry control, or batching, an Azure Function (timer-triggered, C# or Python) is the direct upgrade path with the same pipeline structure.</p>
+
+<p>15-minute polling is a deliberate choice. For environments under a few hundred users, <code>limit=100</code> per cycle captures everything. For larger deployments, increase the limit (max 5000) or implement cursor-based pagination using <code>after_id</code>. The 1-minute query delay the API enforces is irrelevant at 15-minute intervals.</p>
+
+<p>Custom Log Analytics table is unavoidable. No built-in Sentinel connector for Claude exists. The Data Collector API posts JSON to a <code>_CL</code> table and fields land with type suffixes (<code>_s</code>, <code>_b</code>). The nested <code>data</code> array arrives as <code>data_s</code>, which is a string. All field-level parsing happens downstream in KQL. Microsoft's Logs Ingestion API with a Data Collection Rule is the alternative if you need ingestion-time transformation and schema enforcement, but that adds meaningful setup complexity for a first build.</p>
+
+<hr>
+
+<h2 id="step-1-enable-api">Step 1: Enable the API and create the key</h2>
+
+<p>This happens in claude.ai under Organization settings. Only the Primary Owner can do it.</p>
+
+<p>Navigate to <strong>Data and privacy</strong> and enable the Compliance API. Then go to <strong>Data Management Settings &gt; Compliance access keys</strong>, create a key, name it descriptively (e.g., <code>sentinel-activity-feed-readonly</code>), and select scopes.</p>
+
+<p>For a monitoring-only pipeline, select these three scopes:</p>
+
+<ul>
+  <li><code>read:compliance_activities</code></li>
+  <li><code>read:compliance_org_data</code></li>
+  <li><code>read:compliance_user_data</code></li>
+</ul>
+
+<p>Do not add <code>delete:compliance_user_data</code>. A monitoring pipeline has no business with delete permissions. If your compliance team needs deletion for eDiscovery later, that gets its own key under a separate access control process.</p>
+
+<p>The key is shown exactly once. Copy it and store it in your secrets manager. It will carry the prefix <code>sk-ant-api01-...</code>.</p>
+
+<p>Scopes are immutable after assignment. To change scopes, you create a new key and rotate. Keys can be disabled temporarily and re-enabled, or deleted permanently. There is a second key type worth knowing: the Admin Key, created from Claude Console by an org admin. It carries a fixed <code>read:compliance_activities</code> scope and returns 401 on all other Compliance API endpoints. Use it only if your environment is Console/API-only and needs Activity Feed access without chat or file retrieval.</p>
+
+<hr>
+
+<h2 id="step-2-validate">Step 2: Validate the endpoint before touching Azure</h2>
+
+<p>Before building anything in the portal, confirm the API responds.</p>
+
+<pre><code>export ANTHROPIC_COMPLIANCE_ACCESS_KEY=sk-ant-api01-your-key-here
+
+curl -H "x-api-key: $ANTHROPIC_COMPLIANCE_ACCESS_KEY" \
+  "https://api.anthropic.com/v1/compliance/activities?limit=5"</code></pre>
+
+<p>Two non-obvious things worth calling out here.</p>
+
+<div class="callout">
+  <p><strong>macOS only:</strong> if you get a 404, the endpoint may not resolve over IPv6. Force IPv4 with <code>curl -4</code>. This does not affect Azure Logic Apps (IPv4 egress by default), but it will silently block local testing until you figure out what is happening.</p>
+</div>
+
+<div class="callout">
+  <p><strong>Header note:</strong> the Compliance API requires only <code>x-api-key</code>. Unlike the standard Anthropic Messages API, no <code>anthropic-version</code> header is needed. The spec mentions this but it is easy to miss.</p>
+</div>
+
+<p>The response envelope is always:</p>
+
+<pre><code>{
+  "data": [ ... ],
+  "has_more": true,
+  "first_id": "activity_abc123",
+  "last_id": "activity_xyz789"
+}</code></pre>
+
+<p><code>data</code> contains an array of Activity objects, newest first. <code>has_more</code> indicates whether more results exist. <code>first_id</code> and <code>last_id</code> are pagination cursors. The internal structure of each Activity object varies by type.</p>
+
+<hr>
+
+<h2 id="step-3-logic-app">Step 3: Create the Logic App</h2>
+
+<p>In the Azure portal, create a Consumption (Multi-tenant) Logic App. Standard region and resource group for your security tooling.</p>
+
+<p>Before you start building the workflow, sort out RBAC. If your environment uses PIM, activate before you open the designer. The three permissions you need:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Permission</th>
+      <th scope="col">When you need it</th>
+      <th scope="col">Contributor covers it?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Microsoft.Logic/workflows/write</code></td>
+      <td>Creating the Logic App</td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code>Microsoft.OperationsManagement/solutions/write</code></td>
+      <td>First Data Collector connection to workspace</td>
+      <td>Sometimes no</td>
+    </tr>
+    <tr>
+      <td><code>Microsoft.Insights/diagnosticSettings/write</code></td>
+      <td>Enabling diagnostic settings</td>
+      <td>No</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Owner at the subscription level clears all three. Deactivate the elevation once the pipeline is confirmed working. Leaving elevated access open after the build is the kind of thing that surfaces in a least-privilege review three months later.</p>
+
+<hr>
+
+<h2 id="step-4-recurrence">Step 4: Recurrence trigger</h2>
+
+<p>Add a Recurrence trigger. Interval 15, Frequency Minute, Time zone UTC. UTC matters here. Activity Feed timestamps are RFC 3339 / UTC, and daylight saving drift will quietly misalign your <code>TimeGenerated</code> joins if you use a local zone.</p>
+
+<hr>
+
+<h2 id="step-5-http">Step 5: HTTP action</h2>
+
+<p>Add an HTTP action. Method GET, URI <code>https://api.anthropic.com/v1/compliance/activities?limit=100</code>, Header <code>x-api-key</code> set to your Compliance Access Key.</p>
+
+<p>Enable Secure Inputs and Secure Outputs in the action's Settings. This masks the API key and response body in all run history views. Without it, anyone with Logic App run history access can read your key and your org's activity data. Azure will suggest Key Vault as the alternative. For a single-key pipeline with RBAC-controlled Logic App access, Secure Inputs/Outputs is an acceptable control. If your policy requires Key Vault, use Key Vault. The decision should be documented either way.</p>
+
+<hr>
+
+<h2 id="step-6-parse-json">Step 6: Parse JSON and the schema decision that breaks production runs</h2>
+
+<p>Set Content to the Body output from the HTTP action.</p>
+
+<p>The Logic App designer offers "Use sample payload to generate schema." If you paste a curl response, it generates something like this for a <code>claude_chat_created</code> sample:</p>
+
+<pre><code>{
+  "type": "object",
+  "properties": {
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "created_at", "organization_id",
+          "organization_uuid", "actor", "type"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "created_at": { "type": "string" },
+          "organization_id": { "type": ["string", "null"] },
+          "organization_uuid": { "type": ["string", "null"] },
+          "actor": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "email_address": { "type": "string" },
+              "user_id": { "type": "string" },
+              "ip_address": { "type": "string" },
+              "user_agent": { "type": "string" }
+            },
+            "required": ["type", "email_address", "user_id",
+                         "ip_address", "user_agent"]
+          },
+          "type": { "type": "string" },
+          "claude_chat_id": { "type": "string" },
+          "claude_project_id": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "has_more": { "type": "boolean" },
+    "first_id": { "type": "string" },
+    "last_id": { "type": "string" }
+  },
+  "required": ["data", "has_more", "first_id", "last_id"]
+}</code></pre>
+
+<p>Do not use this schema. It will break.</p>
+
+<p>The <code>required</code> arrays and typed <code>additional_fields</code> are locked to the sample activity type. The next polling cycle will likely return a different activity type. <code>compliance_api_accessed</code> carries <code>request_id</code>, <code>url</code>, <code>request_method</code>, <code>status_code</code> instead of <code>claude_chat_id</code>. Different actor types have different field shapes: <code>unauthenticated_user_actor</code> has <code>unauthenticated_email_address</code> instead of <code>email_address</code>. Schema validation fails and the run stops. You will come back to this an hour later wondering why the pipeline went silent.</p>
+
+<p>The Activity Feed has 260+ activity types and six actor types: <code>user_actor</code>, <code>api_actor</code>, <code>admin_api_key_actor</code>, <code>unauthenticated_user_actor</code>, <code>anthropic_actor</code>, <code>scim_directory_sync_actor</code>. Anthropic adds new types with each spec revision. A strict schema turns every spec update into a pipeline failure. Use this instead:</p>
+
+<pre><code>{
+  "type": "object",
+  "properties": {
+    "data": {
+      "type": "array"
+    },
+    "has_more": {
+      "type": "boolean"
+    },
+    "first_id": {
+      "type": ["string", "null"]
+    },
+    "last_id": {
+      "type": ["string", "null"]
+    }
+  },
+  "additionalProperties": true
+}</code></pre>
+
+<p>Only the envelope fields are defined. The <code>data</code> array is untyped. <code>first_id</code> and <code>last_id</code> accept null, which the spec defines for empty result sets. No <code>required</code> array. <code>additionalProperties: true</code>. All field-level parsing moves to KQL.</p>
+
+<hr>
+
+<h2 id="step-7-log-analytics">Step 7: Send to Log Analytics</h2>
+
+<p>Add a Send Data action (Azure Log Analytics Data Collector connector). Connect to your Sentinel-linked workspace using Workspace ID and Primary Key from Agents management settings. Set the JSON Request body to the Body from the HTTP action (the full response envelope, not the parsed output). Set Custom Log Name to something like <code>ClaudeComplianceLogs</code> (Azure appends <code>_CL</code>).</p>
+
+<p>Sending the full envelope means <code>has_more</code>, <code>first_id</code>, and <code>last_id</code> land in the table alongside <code>data</code>. This is useful. If <code>has_more</code> is ever <code>true</code> in your logs, your polling window missed events and you need to act on it.</p>
+
+<hr>
+
+<h2 id="step-8-alerting">Step 8: Failure alerting and diagnostics</h2>
+
+<p>The pipeline is silent when it breaks. An HTTP 401 (key revoked or rotated), a schema validation failure, a Log Analytics ingestion issue, or a platform error all look identical from the outside: no new rows in the table. Build the alerting before you trust the pipeline.</p>
+
+<p>In Azure Monitor, create an alert rule scoped to the Logic App. Signal: <code>Runs Failed</code>, Operator: Greater than 0, Evaluation every 15 minutes, Action: email to your security team.</p>
+
+<p>Enable diagnostic settings on the Logic App with <code>WorkflowRuntime</code> logs going to the same Log Analytics workspace. This requires <code>Microsoft.Insights/diagnosticSettings/write</code>, which is the permission from the RBAC table above that Contributor does not cover. If you did not activate that permission before starting, this is when you find out.</p>
+
+<hr>
+
+<h2 id="confirming-data-flow">Confirming data flow</h2>
+
+<p>After the first successful run:</p>
+
+<pre><code>ClaudeComplianceLogs_CL
+| take 10</code></pre>
+
+<p>Expected fields: <code>data_s</code> (JSON string of the activities array), <code>has_more_b</code>, <code>first_id_s</code>, <code>last_id_s</code>, <code>TimeGenerated</code>.</p>
+
+<p>To extract individual activities:</p>
+
+<pre><code>ClaudeComplianceLogs_CL
+| where TimeGenerated &gt; ago(1h)
+| extend activities = parse_json(data_s)
+| mv-expand activity = activities
+| extend
+    activity_id    = tostring(activity.id),
+    activity_type  = tostring(activity.type),
+    created_at     = todatetime(activity.created_at),
+    actor_type     = tostring(activity.actor.type),
+    actor_email    = tostring(activity.actor.email_address),
+    actor_ip       = tostring(activity.actor.ip_address),
+    org_id         = tostring(activity.organization_id)
+| project TimeGenerated, created_at, activity_type,
+          actor_type, actor_email, actor_ip, org_id, activity_id</code></pre>
+
+<p>Pagination check:</p>
+
+<pre><code>ClaudeComplianceLogs_CL
+| where has_more_b == true</code></pre>
+
+<p>This should return no rows. If it returns anything, your polling window is undersized. Increase <code>limit</code> up to 5000 or implement cursor-based pagination before relying on this data for detections.</p>
+
+<hr>
+
+<h2 id="detection-queries">Detection queries</h2>
+
+<p>All queries follow the same structure: parse <code>data_s</code>, <code>mv-expand</code>, filter by <code>activity_type</code>. The pattern is worth internalizing because you will write many variations.</p>
+
+<h3>Role changes and privilege escalation</h3>
+
+<div class="query-block">
+<div class="query-toggle" role="button" aria-expanded="false">
+  <span class="toggle-arrow">&#9658;</span>
+  <span class="toggle-label">Show query</span>
+</div>
+<div class="query-content">
+<pre><code>ClaudeComplianceLogs_CL
+| extend activities = parse_json(data_s)
+| mv-expand activity = activities
+| where tostring(activity.type) in (
+    "claude_user_role_updated",
+    "role_assignment_granted",
+    "role_assignment_revoked",
+    "rbac_role_assigned",
+    "rbac_role_unassigned",
+    "primary_owner_transferred"
+)
+| extend
+    actor_email   = tostring(activity.actor.email_address),
+    target_user   = coalesce(
+        tostring(activity.user_id),
+        tostring(activity.target_id),
+        tostring(activity.principal_id),
+        tostring(activity.new_owner_id)
+    ),
+    previous_role = tostring(activity.previous_role),
+    current_role  = tostring(activity.current_role)
+| project TimeGenerated, tostring(activity.type),
+          actor_email, target_user, previous_role, current_role</code></pre>
+</div>
+</div>
+
+<p><code>primary_owner_transferred</code> is the one to watch. It is a low-frequency event in any healthy environment. It should never appear unannounced.</p>
+
+<h3>API key lifecycle</h3>
+
+<div class="query-block">
+<div class="query-toggle" role="button" aria-expanded="false">
+  <span class="toggle-arrow">&#9658;</span>
+  <span class="toggle-label">Show query</span>
+</div>
+<div class="query-content">
+<pre><code>ClaudeComplianceLogs_CL
+| extend activities = parse_json(data_s)
+| mv-expand activity = activities
+| where tostring(activity.type) in (
+    "api_key_created",
+    "admin_api_key_created",
+    "admin_api_key_deleted",
+    "admin_api_key_updated",
+    "scoped_api_key_deleted",
+    "scoped_api_key_updated",
+    "service_key_created",
+    "service_key_revoked"
+)
+| extend
+    actor_email = tostring(activity.actor.email_address),
+    key_id      = coalesce(
+        tostring(activity.api_key_id),
+        tostring(activity.admin_api_key_id),
+        tostring(activity.service_key_id)
+    ),
+    scopes      = tostring(activity.scopes)
+| project TimeGenerated, tostring(activity.type),
+          actor_email, key_id, scopes</code></pre>
+</div>
+</div>
+
+<h3>Activity volume baseline</h3>
+
+<p>Run this first. Before writing detections, you need to understand what normal looks like in your environment. Anomaly-based detection on a feed you have never baselined is noise from day one.</p>
+
+<div class="query-block">
+<div class="query-toggle" role="button" aria-expanded="false">
+  <span class="toggle-arrow">&#9658;</span>
+  <span class="toggle-label">Show query</span>
+</div>
+<div class="query-content">
+<pre><code>ClaudeComplianceLogs_CL
+| extend activities = parse_json(data_s)
+| mv-expand activity = activities
+| extend activity_type = tostring(activity.type)
+| summarize count() by activity_type, bin(TimeGenerated, 1h)
+| order by count_ desc</code></pre>
+</div>
+</div>
+
+<h3>Compliance API self-monitoring</h3>
+
+<p>The API logs its own access. <code>compliance_api_accessed</code> records every request against the feed, including the requesting IP and the key used. This is the query that tells you if your key is being used from somewhere it should not be.</p>
+
+<div class="query-block">
+<div class="query-toggle" role="button" aria-expanded="false">
+  <span class="toggle-arrow">&#9658;</span>
+  <span class="toggle-label">Show query</span>
+</div>
+<div class="query-content">
+<pre><code>ClaudeComplianceLogs_CL
+| extend activities = parse_json(data_s)
+| mv-expand activity = activities
+| where tostring(activity.type) == "compliance_api_accessed"
+| extend
+    request_ip = tostring(activity.actor.ip_address),
+    status_code = toint(activity.status_code),
+    api_key_id  = tostring(activity.actor.api_key_id)
+| project TimeGenerated, request_ip, status_code, api_key_id</code></pre>
+</div>
+</div>
+
+<p>Any IP outside your Logic App's outbound range or your own testing machine is worth investigating before you assume it is noise.</p>
+
+<h3>Organization settings changes</h3>
+
+<div class="query-block">
+<div class="query-toggle" role="button" aria-expanded="false">
+  <span class="toggle-arrow">&#9658;</span>
+  <span class="toggle-label">Show query</span>
+</div>
+<div class="query-content">
+<pre><code>ClaudeComplianceLogs_CL
+| extend activities = parse_json(data_s)
+| mv-expand activity = activities
+| where tostring(activity.type) in (
+    "claude_organization_settings_updated",
+    "org_compliance_api_settings_updated",
+    "org_cowork_enabled",
+    "org_cowork_disabled",
+    "org_sso_toggled",
+    "org_sso_connection_activated",
+    "org_sso_connection_deactivated",
+    "org_ip_restriction_created",
+    "org_ip_restriction_updated",
+    "org_ip_restriction_deleted"
+)
+| extend actor_email = tostring(activity.actor.email_address)
+| project TimeGenerated, tostring(activity.type), actor_email</code></pre>
+</div>
+</div>
+
+<p>The same pattern covers connector and integration changes (<code>mcp_server_created</code>, <code>mcp_server_deleted</code>, <code>integration_user_connected</code>, <code>integration_user_disconnected</code>), skill lifecycle events (<code>claude_skill_created</code>, <code>claude_skill_replaced</code>, <code>claude_skill_deleted</code>, <code>claude_skill_enabled</code>, <code>claude_skill_disabled</code>), and member changes outside business hours (filter <code>org_user_invite_sent</code> and <code>org_user_deleted</code> by <code>datetime_part("hour", created_at)</code>). Swap in the activity type names from the spec. The query structure does not change.</p>
+
+<p>Each of these promotes directly to a Sentinel Scheduled analytic rule with entity mapping (<code>actor_email</code> to Account, <code>actor_ip</code> to IP) and playbook-based response.</p>
+
+<hr>
+
+<h2 id="known-limitations">Known limitations</h2>
+
+<p><strong>No cursor state between runs.</strong> Each run fetches the latest 100 activities with no memory of where the previous run ended. If more than 100 events occur in a 15-minute window, older events are silently missed. For most deployments under a few hundred users this is unlikely, but it is not a guarantee. Closing this gap requires persisting <code>last_id</code> in Azure Storage Table and using it as the <code>after_id</code> parameter on the next run.</p>
+
+<p><strong>Cursor direction.</strong> One thing the spec buries: <code>after_id</code> and <code>before_id</code> cannot be combined in a single request. To paginate forward through time (toward newer events), use <code>before_id</code> set to the <code>first_id</code> from your previous response. To page backward (toward older events), use <code>after_id</code> set to <code>last_id</code>. Pick a direction and be consistent.</p>
+
+<p><strong>Data Collector flattening.</strong> The <code>data</code> array lands as a string (<code>data_s</code>). Column-level indexing, field-level retention policies, and ingestion-time alerting on individual activity fields are not available without a Data Collection Rule and transformation pipeline on top of this setup. For a first build, the KQL overhead is manageable. At scale it becomes a performance consideration.</p>
+
+<hr>
+
+<h2 id="whats-next">What is worth building next</h2>
+
+<p>Cursor-based pagination is the first real gap. Until it is in place, any detection built on this pipeline has a coverage caveat. The build is not complex: one Azure Storage Table write after each successful run, one read at the start of the next.</p>
+
+<p>The pipeline tells you when skills change, not whether the skill content is acceptable. A governance process for skill review is the complementary control. Activity Feed data surfaces the when and the who. Human review covers the what.</p>
+
+<p>Content-level DLP via the chat message retrieval endpoints under <code>read:compliance_user_data</code> is a separate and more complex build, but the Activity Feed is the right place to start. Know what events are happening before you try to inspect the content behind them.</p>
+
+<hr>
+
+<h2 id="closing">Closing</h2>
+
+<p>The non-obvious parts of this build are the schema decision (strict breaks silently on the next polling cycle), the RBAC elevation for diagnostic settings (Contributor is not enough), and the key management discipline (scopes are immutable, the key is shown once). Everything else follows from the spec if you read it carefully.</p>
+
+<p>What the pipeline gives you is a proper audit surface for Claude Enterprise activity inside Sentinel, queryable with the same KQL you use for everything else. Most teams running Claude Enterprise today have no structured visibility into what is happening at the API and admin layer. This build closes that gap in a few hours.</p>
+
+<p>Build it before users are live, not after you need it.</p>
+
+</section>
+</article>
+</main>
+
+<footer>
+  <span>ad-cloud-sec.github.io</span>
+  <a href="https://www.linkedin.com/in/amardip-deshpande/" target="_blank" rel="noopener noreferrer">LinkedIn →</a>
+</footer>
+
+<script>
+  document.querySelectorAll('.query-toggle').forEach(function(toggle) {
+    toggle.addEventListener('click', function() {
+      var content = this.nextElementSibling;
+      var isOpen = content.classList.contains('open');
+      content.classList.toggle('open');
+      this.setAttribute('aria-expanded', String(!isOpen));
+      this.querySelector('.toggle-label').textContent = isOpen ? 'Show query' : 'Hide query';
+    });
+  });
+</script>
+</body>
+</html>
